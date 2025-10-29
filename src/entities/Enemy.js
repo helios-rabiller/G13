@@ -6,8 +6,9 @@
 import { ENEMY_CONFIG, ENEMY_AI } from '../config.js';
 
 export class Enemy {
-  constructor(scene, config) {
+  constructor(scene, config, maze) {
     this.scene = scene;
+    this.maze = maze;
     this.name = config.name;
     this.color = config.color;
     this.x = config.x;
@@ -15,12 +16,13 @@ export class Enemy {
     this.width = ENEMY_CONFIG.width;
     this.height = ENEMY_CONFIG.height;
     this.speed = ENEMY_CONFIG.baseSpeed;
+    this.radius = this.width / 2;
     
     this.velocityX = 0;
     this.velocityY = 0;
     this.direction = 'right';
     
-    this.mode = 'scatter';  // 'scatter' ou 'chase'
+    this.mode = 'scatter';
     this.lastDecisionTime = 0;
     this.targetX = config.x;
     this.targetY = config.y;
@@ -37,10 +39,7 @@ export class Enemy {
       this.color
     );
     this.sprite.setOrigin(0.5);
-    
-    this.scene.physics.world.enable(this.sprite);
-    this.sprite.body.setCollideWorldBounds(true);
-    this.sprite.body.setBounce(0, 0);
+    this.sprite.setDepth(2);
   }
 
   update(playerPos, delta) {
@@ -127,10 +126,41 @@ export class Enemy {
       this.velocityY = 0;
     }
 
-    this.x += this.velocityX * deltaSeconds;
-    this.y += this.velocityY * deltaSeconds;
-    this.sprite.x = this.x;
-    this.sprite.y = this.y;
+    // Calculer nouvelle position
+    let newX = this.x + this.velocityX * deltaSeconds;
+    let newY = this.y + this.velocityY * deltaSeconds;
+
+    // Vérifier les collisions
+    if (!this.maze.checkCollision(newX - this.width / 2, newY - this.height / 2, this.width, this.height)) {
+      this.x = newX;
+      this.y = newY;
+    } else {
+      // Si collision, changer de direction
+      this.findNewTarget();
+    }
+
+    this.sprite.x = Math.round(this.x);
+    this.sprite.y = Math.round(this.y);
+  }
+
+  findNewTarget() {
+    // Trouver une nouvelle direction valide
+    const directions = [
+      { x: this.x + 50, y: this.y },
+      { x: this.x - 50, y: this.y },
+      { x: this.x, y: this.y + 50 },
+      { x: this.x, y: this.y - 50 }
+    ];
+
+    const validDirs = directions.filter(
+      dir => !this.maze.checkCollision(dir.x - this.width / 2, dir.y - this.height / 2, this.width, this.height)
+    );
+
+    if (validDirs.length > 0) {
+      const random = validDirs[Math.floor(Math.random() * validDirs.length)];
+      this.targetX = random.x;
+      this.targetY = random.y;
+    }
   }
 
   distanceTo(pos) {

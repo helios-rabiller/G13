@@ -6,13 +6,15 @@
 import { PLAYER_CONFIG } from '../config.js';
 
 export class Player {
-  constructor(scene, x, y) {
+  constructor(scene, x, y, maze) {
     this.scene = scene;
+    this.maze = maze;
     this.x = x || PLAYER_CONFIG.startX;
     this.y = y || PLAYER_CONFIG.startY;
     this.width = PLAYER_CONFIG.width;
     this.height = PLAYER_CONFIG.height;
     this.speed = PLAYER_CONFIG.speed;
+    this.radius = this.width / 2;
     
     this.velocityX = 0;
     this.velocityY = 0;
@@ -38,11 +40,7 @@ export class Player {
       PLAYER_CONFIG.color
     );
     this.sprite.setOrigin(0.5);
-    
-    // Physics
-    this.scene.physics.world.enable(this.sprite);
-    this.sprite.body.setCollideWorldBounds(true);
-    this.sprite.body.setBounce(0, 0);
+    this.sprite.setDepth(2);
   }
 
   update(input, delta) {
@@ -77,25 +75,41 @@ export class Player {
 
   updateMovement(delta) {
     // Essayer de changer de direction
-    if (this.canMove(this.nextDirectionX, this.nextDirectionY)) {
-      this.velocityX = this.nextDirectionX;
-      this.velocityY = this.nextDirectionY;
+    if (this.nextDirectionX !== 0 || this.nextDirectionY !== 0) {
+      if (this.canMove(this.nextDirectionX, this.nextDirectionY)) {
+        this.velocityX = this.nextDirectionX;
+        this.velocityY = this.nextDirectionY;
+      }
     }
   }
 
   updatePosition(delta) {
     const deltaSeconds = delta / 1000;
-    this.x += this.velocityX * this.speed * deltaSeconds;
-    this.y += this.velocityY * this.speed * deltaSeconds;
     
-    this.sprite.x = this.x;
-    this.sprite.y = this.y;
+    // Calculer nouvelle position
+    let newX = this.x + this.velocityX * this.speed * deltaSeconds;
+    let newY = this.y + this.velocityY * this.speed * deltaSeconds;
+
+    // Vérifier les collisions avec les murs
+    if (!this.maze.checkCollision(newX - this.width / 2, newY - this.height / 2, this.width, this.height)) {
+      this.x = newX;
+      this.y = newY;
+    }
+    
+    this.sprite.x = Math.round(this.x);
+    this.sprite.y = Math.round(this.y);
   }
 
   canMove(dirX, dirY) {
-    // Vérifier les collisions avec les murs
-    // À implémenter avec le système de collision
-    return true;
+    // Vérifier si on peut se déplacer dans cette direction
+    const testX = this.x + dirX * 5;
+    const testY = this.y + dirY * 5;
+    return !this.maze.checkCollision(
+      testX - this.width / 2,
+      testY - this.height / 2,
+      this.width,
+      this.height
+    );
   }
 
   eatPellet(value) {
@@ -120,12 +134,20 @@ export class Player {
   reset() {
     this.x = PLAYER_CONFIG.startX;
     this.y = PLAYER_CONFIG.startY;
+    
+    // Ajuster à une position valide
+    const validPos = this.maze.findNearestWalkable(this.x, this.y);
+    this.x = validPos.x;
+    this.y = validPos.y;
+    
     this.velocityX = 0;
     this.velocityY = 0;
     this.nextDirectionX = 0;
     this.nextDirectionY = 0;
     this.invulnerable = false;
     this.sprite.setAlpha(1);
+    this.sprite.x = this.x;
+    this.sprite.y = this.y;
   }
 
   getPosition() {
