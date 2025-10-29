@@ -69,22 +69,26 @@ export class PelletManager {
     }
   }
 
-  eat(x, y, radius) {
-    // Vérifier la collision avec les pièces
+  updateRender(scene) {
+    // Redessiner après collecte (plus efficace que destroy/create)
+    this.render(scene);
+  }
+
+  eat(playerTileX, playerTileY) {
+    // Vérifier pièce au même tile
     for (const pellet of this.pellets) {
       if (!pellet.active) continue;
 
-      const dx = pellet.x - x;
-      const dy = pellet.y - y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-
-      if (distance < radius + pellet.radius) {
+      if (pellet.col === playerTileX && pellet.row === playerTileY) {
         pellet.active = false;
         this.count -= 1;
-        return pellet.value;
+        return {
+          value: pellet.value,
+          isPowerUp: pellet.isPowerUp
+        };
       }
     }
-    return 0;
+    return null;
   }
 
   getRemaining() {

@@ -33,6 +33,11 @@ export class Player {
     this.invulnerable = false;
     this.invulnerableTimer = 0;
     
+    // Power-up
+    this.powered = false;
+    this.poweredTimer = 0;
+    this.poweredDuration = 8000;  // 8 secondes
+    
     this.create();
   }
 
@@ -96,6 +101,19 @@ export class Player {
         this.sprite.setAlpha(1);
       }
     }
+
+    // Power-up timer
+    if (this.powered) {
+      this.poweredTimer -= delta;
+      if (this.poweredTimer <= 0) {
+        this.powered = false;
+        this.sprite.setFillStyle(0xFFFF00);  // Retour jaune
+      } else {
+        // Clignoter quand power-up actif
+        const blink = Math.floor(this.poweredTimer / 200) % 2;
+        this.sprite.setFillStyle(blink ? 0xFF00FF : 0xFFFF00);
+      }
+    }
   }
 
   tryMove() {
@@ -126,6 +144,11 @@ export class Player {
     this.score += value;
   }
 
+  eatPowerUp() {
+    this.powered = true;
+    this.poweredTimer = this.poweredDuration;
+  }
+
   hitByEnemy() {
     if (!this.invulnerable) {
       this.lives -= 1;
@@ -146,7 +169,10 @@ export class Player {
     this.nextDirY = 0;
     this.moveTimer = 0;
     this.invulnerable = false;
+    this.powered = false;
+    this.poweredTimer = 0;
     this.sprite.setAlpha(1);
+    this.sprite.setFillStyle(0xFFFF00);
   }
 
   getPosition() {

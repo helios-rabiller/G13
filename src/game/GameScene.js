@@ -55,6 +55,22 @@ export class GameScene extends Phaser.Scene {
     console.log('Game initialized - Tile-based movement');
   }
 
+  activatePowerUp() {
+    this.player.eatPowerUp();
+    
+    // Ralentir les ennemis
+    this.enemies.forEach(enemy => {
+      enemy.moveDelay *= 1.5;  // 1.5x plus lent
+    });
+
+    // Remettre à vitesse normale après expiration
+    this.time.delayedCall(this.player.poweredDuration, () => {
+      this.enemies.forEach(enemy => {
+        enemy.moveDelay /= 1.5;  // Retour vitesse normale
+      });
+    });
+  }
+
   update(time, delta) {
     if (!this.gameActive) return;
 
@@ -73,14 +89,19 @@ export class GameScene extends Phaser.Scene {
     });
 
     // Collisions joueur - pièces
-    const pelletValue = this.pelletManager.eat(
-      this.player.x,
-      this.player.y,
-      this.player.radius
+    const pelletResult = this.pelletManager.eat(
+      this.player.tileX,
+      this.player.tileY
     );
-    if (pelletValue > 0) {
-      this.player.eatPellet(pelletValue);
-      this.pelletManager.render(this);
+    if (pelletResult) {
+      this.player.eatPellet(pelletResult.value);
+      
+      // Si power-up
+      if (pelletResult.isPowerUp) {
+        this.activatePowerUp();
+      }
+      
+      this.pelletManager.updateRender(this);
     }
 
     // Collisions joueur - ennemis
