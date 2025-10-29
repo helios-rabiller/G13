@@ -37,12 +37,12 @@ export class Enemy {
   }
 
   create() {
-    this.sprite = this.scene.add.rectangle(
+    // Fantôme blanc (classique Pac-Man)
+    this.sprite = this.scene.add.circle(
       this.getPixelX(),
       this.getPixelY(),
-      WORLD_CONFIG.tileSize - 4,
-      WORLD_CONFIG.tileSize - 4,
-      this.color
+      WORLD_CONFIG.tileSize / 2 - 2,
+      0xFFFFFF  // Blanc
     );
     this.sprite.setOrigin(0.5);
     this.sprite.setDepth(2);

@@ -42,12 +42,12 @@ export class Player {
   }
 
   create() {
-    this.sprite = this.scene.add.rectangle(
+    // Pac-Man: Cercle jaune avec "bouche"
+    this.sprite = this.scene.add.circle(
       this.getPixelX(),
       this.getPixelY(),
-      this.tileSize - 4,
-      this.tileSize - 4,
-      PLAYER_CONFIG.color
+      this.tileSize / 2 - 2,
+      0xFFFF00  // Jaune
     );
     this.sprite.setOrigin(0.5);
     this.sprite.setDepth(2);
@@ -111,7 +111,7 @@ export class Player {
       } else {
         // Clignoter quand power-up actif
         const blink = Math.floor(this.poweredTimer / 200) % 2;
-        this.sprite.setFillStyle(blink ? 0xFF00FF : 0xFFFF00);
+        this.sprite.setFillStyle(blink ? 0xFF00FF : 0xFFFF00);  // Magenta/Jaune
       }
     }
   }

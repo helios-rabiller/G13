@@ -6,10 +6,10 @@
 import { GAME_CONFIG, WORLD_CONFIG, LEVEL_CONFIG } from '../config.js';
 import { Player } from '../entities/Player.js';
 import { Enemy } from '../entities/Enemy.js';
+import { Boss } from '../entities/Boss.js';
 import { Maze } from '../entities/Maze.js';
 import { PelletManager } from '../entities/Pellets.js';
 import { ENEMY_CONFIG } from '../config.js';
-import { CollisionManager } from '../utils/collision.js';
 import { HUD } from '../ui/HUD.js';
 
 export class GameScene extends Phaser.Scene {
@@ -20,6 +20,7 @@ export class GameScene extends Phaser.Scene {
   create() {
     this.level = 1;
     this.gameActive = true;
+    this.bossActive = false;
 
     // Créer le labyrinthe
     this.maze = new Maze(GAME_CONFIG.width, GAME_CONFIG.height, WORLD_CONFIG.tileSize);
@@ -33,6 +34,9 @@ export class GameScene extends Phaser.Scene {
     ENEMY_CONFIG.spawns.forEach(config => {
       this.enemies.push(new Enemy(this, config, this.maze));
     });
+
+    // Boss (pas créé au départ)
+    this.boss = null;
 
     // Gérer les pièces
     this.pelletManager = new PelletManager(this.maze, WORLD_CONFIG.tileSize);
@@ -63,12 +67,30 @@ export class GameScene extends Phaser.Scene {
       enemy.moveDelay *= 1.5;  // 1.5x plus lent
     });
 
+    // Ralentir le boss aussi
+    if (this.boss) {
+      this.boss.moveDelay *= 1.5;
+    }
+
     // Remettre à vitesse normale après expiration
     this.time.delayedCall(this.player.poweredDuration, () => {
       this.enemies.forEach(enemy => {
         enemy.moveDelay /= 1.5;  // Retour vitesse normale
       });
+      
+      if (this.boss) {
+        this.boss.moveDelay /= 1.5;
+      }
     });
+  }
+
+  checkBossSpawn() {
+    // Spawn boss quand joueur a 1 vie
+    if (this.player.lives === 1 && !this.bossActive && this.boss === null) {
+      this.bossActive = true;
+      this.boss = new Boss(this, this.maze);
+      console.log('⚠️ BOSS SPAWNED - PACHORMAN APPEARS!');
+    }
   }
 
   update(time, delta) {
@@ -83,10 +105,18 @@ export class GameScene extends Phaser.Scene {
     };
     this.player.update(input, delta);
 
+    // Vérifier spawn boss
+    this.checkBossSpawn();
+
     // Update ennemis
     this.enemies.forEach(enemy => {
       enemy.update(this.player.getPosition(), delta);
     });
+
+    // Update boss
+    if (this.boss) {
+      this.boss.update(this.player.getPosition(), delta);
+    }
 
     // Collisions joueur - pièces
     const pelletResult = this.pelletManager.eat(
@@ -106,6 +136,11 @@ export class GameScene extends Phaser.Scene {
 
     // Collisions joueur - ennemis
     this.checkEnemyCollisions();
+
+    // Collisions joueur - boss
+    if (this.boss) {
+      this.checkBossCollision();
+    }
 
     // Mise à jour HUD
     this.hud.updateScore(this.player.score);
@@ -134,6 +169,16 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  checkBossCollision() {
+    // Boss collision - pareil que ennemis
+    if (this.boss.tileX === this.player.tileX && this.boss.tileY === this.player.tileY) {
+      const alive = this.player.hitByEnemy();
+      if (!alive) {
+        this.gameActive = false;
+      }
+    }
+  }
+
   levelComplete() {
     this.gameActive = false;
     this.hud.showLevelComplete(this.level + 1);
@@ -152,11 +197,24 @@ export class GameScene extends Phaser.Scene {
       enemy.speed *= speedMultiplier;
     });
 
+    // Récompense: Gagner une vie si pas à 3
+    if (this.player.lives < 3) {
+      this.player.lives += 1;
+    }
+
+    // Détruire boss si existant
+    if (this.boss) {
+      this.boss.destroy();
+      this.boss = null;
+      this.bossActive = false;
+    }
+
     // Réinitialiser
     this.player.reset();
     this.pelletManager.reset(this);
     this.gameActive = true;
     this.hud.updateLevel(this.level);
+    this.hud.updateLives(this.player.lives);
   }
 
   gameOver() {
@@ -171,8 +229,12 @@ export class GameScene extends Phaser.Scene {
   shutdown() {
     this.player.destroy();
     this.enemies.forEach(enemy => enemy.destroy());
+    if (this.boss) {
+      this.boss.destroy();
+    }
     this.maze.destroy();
     this.pelletManager.destroy();
     this.hud.destroy();
   }
 }
+
