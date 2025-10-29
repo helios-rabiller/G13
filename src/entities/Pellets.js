@@ -14,6 +14,7 @@ export class PelletManager {
 
   generate(scene) {
     this.pellets = [];
+    const specialRate = this.difficulty?.specialPellets ?? 1.0;
     
     // Parcourir la grille et placer les pièces
     for (let row = 1; row < this.maze.rows - 1; row++) {
@@ -23,17 +24,35 @@ export class PelletManager {
           const x = col * this.tileSize + this.tileSize / 2;
           const y = row * this.tileSize + this.tileSize / 2;
 
-          // 95% pièces normales, 5% power-ups
-          const isPowerUp = Math.random() < 0.05;
+          let type = 'normal';
+          let value = 10;
+          let radius = 2;
+          let isPowerUp = false;
+          
+          const rand = Math.random();
+          
+          // Appliquer le multiplicateur de difficulté
+          if (rand < (0.05 * specialRate)) {
+            type = 'red';
+            value = 100;
+            radius = 3;
+            isPowerUp = true;
+          } else if (rand < (0.10 * specialRate)) {
+            type = 'pink';
+            value = 50;
+            radius = 2;
+            isPowerUp = true;
+          }
           
           this.pellets.push({
             x,
             y,
             col,
             row,
-            value: isPowerUp ? 50 : 10,
-            radius: isPowerUp ? 4 : 2,
+            value,
+            radius,
             active: true,
+            type,
             isPowerUp
           });
         }
@@ -52,18 +71,26 @@ export class PelletManager {
     this.graphics = scene.make.graphics({ x: 0, y: 0, add: true });
     this.graphics.setDepth(1);
 
-    // Pièces normales
-    this.graphics.fillStyle(0xFFB897, 1); // Couleur pêche
+    // Pièces normales - pêche
+    this.graphics.fillStyle(0xFFB897, 1);
     for (const pellet of this.pellets) {
-      if (pellet.active && !pellet.isPowerUp) {
+      if (pellet.active && pellet.type === 'normal') {
         this.graphics.fillCircle(pellet.x, pellet.y, pellet.radius);
       }
     }
 
-    // Power-ups
-    this.graphics.fillStyle(0xFF6B9D, 1); // Couleur rose/magenta
+    // Pièces roses - power-up temporaire
+    this.graphics.fillStyle(0xFF1493, 1);
     for (const pellet of this.pellets) {
-      if (pellet.active && pellet.isPowerUp) {
+      if (pellet.active && pellet.type === 'pink') {
+        this.graphics.fillCircle(pellet.x, pellet.y, pellet.radius);
+      }
+    }
+
+    // Pièces rouges - invincibilité (rare!)
+    this.graphics.fillStyle(0xFF0000, 1);
+    for (const pellet of this.pellets) {
+      if (pellet.active && pellet.type === 'red') {
         this.graphics.fillCircle(pellet.x, pellet.y, pellet.radius);
       }
     }

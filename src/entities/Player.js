@@ -38,6 +38,11 @@ export class Player {
     this.poweredTimer = 0;
     this.poweredDuration = 8000;  // 8 secondes
     
+    // Invincibility
+    this.invincible = false;
+    this.invincibilityTimer = 0;
+    this.invincibilityDuration = 30000;  // 30 secondes
+    
     this.create();
   }
 
@@ -114,6 +119,19 @@ export class Player {
         this.sprite.setFillStyle(blink ? 0xFF00FF : 0xFFFF00);  // Magenta/Jaune
       }
     }
+
+    // Invincibility timer
+    if (this.invincible) {
+      this.invincibilityTimer -= delta;
+      if (this.invincibilityTimer <= 0) {
+        this.invincible = false;
+        this.sprite.setFillStyle(0xFFFF00);  // Retour jaune
+      } else {
+        // Clignoter fortement en rouge quand invincible
+        const blink = Math.floor(this.invincibilityTimer / 150) % 2;
+        this.sprite.setFillStyle(blink ? 0xFF0000 : 0xFFFF00);  // Rouge/Jaune
+      }
+    }
   }
 
   tryMove() {
@@ -149,6 +167,11 @@ export class Player {
     this.poweredTimer = this.poweredDuration;
   }
 
+  eatInvincibility() {
+    this.invincible = true;
+    this.invincibilityTimer = this.invincibilityDuration;
+  }
+
   hitByEnemy() {
     if (!this.invulnerable) {
       this.lives -= 1;
@@ -171,6 +194,8 @@ export class Player {
     this.invulnerable = false;
     this.powered = false;
     this.poweredTimer = 0;
+    this.invincible = false;
+    this.invincibilityTimer = 0;
     this.sprite.setAlpha(1);
     this.sprite.setFillStyle(0xFFFF00);
   }

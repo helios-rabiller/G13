@@ -3,7 +3,7 @@
  * Logique principale du jeu
  */
 
-import { GAME_CONFIG, WORLD_CONFIG, LEVEL_CONFIG } from '../config.js';
+import { GAME_CONFIG, WORLD_CONFIG, LEVEL_CONFIG, DIFFICULTY_CONFIG } from '../config.js';
 import { Player } from '../entities/Player.js';
 import { Enemy } from '../entities/Enemy.js';
 import { Boss } from '../entities/Boss.js';
@@ -22,24 +22,35 @@ export class GameScene extends Phaser.Scene {
     this.gameActive = true;
     this.bossActive = false;
 
+    // Récupérer la difficulté depuis le menu
+    const difficulty = window.GAME_DIFFICULTY || 'normal';
+    this.difficulty = DIFFICULTY_CONFIG[difficulty];
+
+    console.log(`Game started - Difficulty: ${difficulty}`, this.difficulty);
+
     // Créer le labyrinthe
     this.maze = new Maze(GAME_CONFIG.width, GAME_CONFIG.height, WORLD_CONFIG.tileSize);
     this.maze.render(this);
 
-    // Initialiser le joueur (tile-based)
+    // Initialiser le joueur avec paramètres de difficulté
     this.player = new Player(this, this.maze);
+    this.player.lives = this.difficulty.lives;
+    this.player.moveDelay = 150 / this.difficulty.playerSpeed;  // Ajuster vitesse
     
-    // Initialiser ennemis (tile-based)
+    // Initialiser ennemis (nb selon difficulté)
     this.enemies = [];
-    ENEMY_CONFIG.spawns.forEach(config => {
+    const spawnsToUse = ENEMY_CONFIG.spawns.slice(0, this.difficulty.enemies);
+    spawnsToUse.forEach(config => {
       this.enemies.push(new Enemy(this, config, this.maze));
     });
 
-    // Boss (pas créé au départ)
+    // Boss (création conditionnelle)
     this.boss = null;
+    this.bossShouldSpawn = this.difficulty.boss;
 
     // Gérer les pièces
     this.pelletManager = new PelletManager(this.maze, WORLD_CONFIG.tileSize);
+    this.pelletManager.difficulty = this.difficulty;
     this.pelletManager.generate(this);
 
     // HUD
@@ -47,7 +58,7 @@ export class GameScene extends Phaser.Scene {
     this.hud.updateLevel(this.level);
     this.hud.updateLives(this.player.lives);
 
-    // Input - curseurs et ZQSD (clavier AZERTY français)
+    // Input
     this.cursors = this.input.keyboard.createCursorKeys();
     this.zqsdKeys = this.input.keyboard.addKeys({
       up: Phaser.Input.Keyboard.KeyCodes.Z,
@@ -55,8 +66,6 @@ export class GameScene extends Phaser.Scene {
       down: Phaser.Input.Keyboard.KeyCodes.S,
       right: Phaser.Input.Keyboard.KeyCodes.D
     });
-
-    console.log('Game initialized - Tile-based movement');
   }
 
   activatePowerUp() {
@@ -64,18 +73,16 @@ export class GameScene extends Phaser.Scene {
     
     // Ralentir les ennemis
     this.enemies.forEach(enemy => {
-      enemy.moveDelay *= 1.5;  // 1.5x plus lent
+      enemy.moveDelay *= 1.5;
     });
 
-    // Ralentir le boss aussi
     if (this.boss) {
       this.boss.moveDelay *= 1.5;
     }
 
-    // Remettre à vitesse normale après expiration
     this.time.delayedCall(this.player.poweredDuration, () => {
       this.enemies.forEach(enemy => {
-        enemy.moveDelay /= 1.5;  // Retour vitesse normale
+        enemy.moveDelay /= 1.5;
       });
       
       if (this.boss) {
@@ -84,9 +91,14 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  activateInvincibility() {
+    this.player.eatInvincibility();
+    console.log('🔴 INVINCIBILITY ACTIVATED!');
+  }
+
   checkBossSpawn() {
-    // Spawn boss quand joueur a 1 vie
-    if (this.player.lives === 1 && !this.bossActive && this.boss === null) {
+    // Spawn boss quand joueur a 1 vie (et si difficulté le permet)
+    if (this.bossShouldSpawn && this.player.lives === 1 && !this.bossActive && this.boss === null) {
       this.bossActive = true;
       this.boss = new Boss(this, this.maze);
       console.log('⚠️ BOSS SPAWNED - PACHORMAN APPEARS!');
@@ -126,9 +138,11 @@ export class GameScene extends Phaser.Scene {
     if (pelletResult) {
       this.player.eatPellet(pelletResult.value);
       
-      // Si power-up
-      if (pelletResult.isPowerUp) {
+      // Différents types de pièces
+      if (pelletResult.type === 'pink') {
         this.activatePowerUp();
+      } else if (pelletResult.type === 'red') {
+        this.activateInvincibility();
       }
       
       this.pelletManager.updateRender(this);
@@ -159,22 +173,33 @@ export class GameScene extends Phaser.Scene {
 
   checkEnemyCollisions() {
     this.enemies.forEach(enemy => {
-      // Collision en tiles (plus simple et fiable)
       if (enemy.tileX === this.player.tileX && enemy.tileY === this.player.tileY) {
-        const alive = this.player.hitByEnemy();
-        if (!alive) {
-          this.gameActive = false;
+        if (this.player.invincible) {
+          // Détruire l'ennemi quand joueur est invincible
+          enemy.destroy();
+          this.enemies = this.enemies.filter(e => e !== enemy);
+          this.player.score += 500;
+          console.log('👻 Ghost destroyed! +500 points');
+        } else {
+          const alive = this.player.hitByEnemy();
+          if (!alive) {
+            this.gameActive = false;
+          }
         }
       }
     });
   }
 
   checkBossCollision() {
-    // Boss collision - pareil que ennemis
     if (this.boss.tileX === this.player.tileX && this.boss.tileY === this.player.tileY) {
-      const alive = this.player.hitByEnemy();
-      if (!alive) {
-        this.gameActive = false;
+      if (this.player.invincible) {
+        // Boss ne peut pas être détruit par invincibilité
+        this.player.score += 1000;
+      } else {
+        const alive = this.player.hitByEnemy();
+        if (!alive) {
+          this.gameActive = false;
+        }
       }
     }
   }

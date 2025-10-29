@@ -14,18 +14,18 @@
 
         @keyframes flicker {
             0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
-                text-shadow: 0 0 10px #FF0000, 0 0 20px #FF0000;
+                text-shadow: 0 0 5px #FF0000;
                 color: #FF0000;
             }
             20%, 24%, 55% {
                 text-shadow: none;
-                color: #330000;
+                color: #8B0000;
             }
         }
 
         @keyframes pulse {
-            0%, 100% { box-shadow: inset 0 0 30px rgba(255, 0, 0, 0.3); }
-            50% { box-shadow: inset 0 0 50px rgba(255, 0, 0, 0.6); }
+            0%, 100% { box-shadow: 0 0 20px rgba(255, 0, 0, 0.4); }
+            50% { box-shadow: 0 0 30px rgba(255, 0, 0, 0.6); }
         }
 
         body {
@@ -40,7 +40,7 @@
             justify-content: center;
         }
 
-        /* Titre horror */
+        /* Titre horror - moins intense */
         #title {
             font-size: 64px;
             font-weight: bold;
@@ -49,24 +49,72 @@
             animation: flicker 0.15s infinite;
             letter-spacing: 8px;
             text-transform: uppercase;
-            text-shadow: 0 0 20px #FF0000, 0 0 40px #8B0000;
+            text-shadow: 0 0 10px #FF0000;
         }
 
-        /* Layout principal */
-        .game-wrapper {
+        /* Menu de difficulté */
+        #difficulty-menu {
+            background: rgba(0, 0, 0, 0.95);
+            border: 2px solid #FF0000;
+            padding: 40px;
+            border-radius: 0;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.4);
+        }
+
+        #difficulty-menu h2 {
+            font-size: 28px;
+            margin-bottom: 30px;
+            text-shadow: 0 0 5px #FF0000;
+        }
+
+        .difficulty-buttons {
             display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .difficulty-btn {
+            background: rgba(255, 0, 0, 0.15);
+            border: 2px solid #FF0000;
+            color: #FF0000;
+            padding: 15px 30px;
+            font-family: 'Creepster', cursive;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .difficulty-btn:hover {
+            background: rgba(255, 0, 0, 0.3);
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.6);
+            transform: scale(1.05);
+        }
+
+        .difficulty-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Game wrapper */
+        .game-wrapper {
+            display: none;
             gap: 40px;
             align-items: center;
             justify-content: center;
             width: 100%;
         }
 
+        .game-wrapper.active {
+            display: flex;
+        }
+
         /* Game canvas */
         #game-container {
-            box-shadow: 
-                0 0 40px rgba(255, 0, 0, 0.8),
-                inset 0 0 20px rgba(255, 0, 0, 0.3);
-            border: 4px solid #FF0000;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.4);
+            border: 2px solid #FF0000;
             animation: pulse 2s infinite;
             overflow: hidden;
         }
@@ -79,18 +127,18 @@
         /* Sidebar UI */
         .ui-panel {
             background: rgba(0, 0, 0, 0.95);
-            border: 3px solid #FF0000;
+            border: 2px solid #FF0000;
             padding: 25px;
             border-radius: 0;
             min-width: 280px;
-            box-shadow: 0 0 30px rgba(255, 0, 0, 0.5);
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.4);
             display: flex;
             flex-direction: column;
             gap: 20px;
         }
 
         .ui-section {
-            border-bottom: 2px solid #FF0000;
+            border-bottom: 1px solid #FF0000;
             padding-bottom: 15px;
         }
 
@@ -99,8 +147,8 @@
         }
 
         .ui-label {
-            font-size: 14px;
-            letter-spacing: 2px;
+            font-size: 12px;
+            letter-spacing: 1px;
             opacity: 0.7;
             margin-bottom: 5px;
         }
@@ -108,7 +156,6 @@
         .ui-value {
             font-size: 28px;
             font-weight: bold;
-            text-shadow: 0 0 10px #FF0000;
         }
 
         .lives-display {
@@ -117,13 +164,14 @@
         }
 
         .life-icon {
-            width: 24px;
-            height: 24px;
+            width: 20px;
+            height: 20px;
             background: #FF0000;
             border: 1px solid #FF0000;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 10px;
         }
 
         .life-icon.dead {
@@ -131,12 +179,11 @@
             opacity: 0.3;
         }
 
-        /* Controls info */
         .controls {
-            background: rgba(255, 0, 0, 0.1);
+            background: rgba(255, 0, 0, 0.05);
             border: 1px solid #FF0000;
-            padding: 15px;
-            font-size: 12px;
+            padding: 12px;
+            font-size: 11px;
             line-height: 1.6;
             opacity: 0.8;
         }
@@ -150,8 +197,8 @@
         .footer-text {
             position: absolute;
             bottom: 20px;
-            font-size: 11px;
-            opacity: 0.5;
+            font-size: 10px;
+            opacity: 0.4;
             letter-spacing: 1px;
         }
     </style>
@@ -159,6 +206,18 @@
 <body>
     <div id="title">PACHORMAN</div>
 
+    <!-- Menu de difficulté -->
+    <div id="difficulty-menu">
+        <h2>SELECT DIFFICULTY</h2>
+        <div class="difficulty-buttons">
+            <button class="difficulty-btn" data-difficulty="easy">FACILE</button>
+            <button class="difficulty-btn" data-difficulty="normal">MOYEN</button>
+            <button class="difficulty-btn" data-difficulty="hard">DIFFICILE</button>
+            <button class="difficulty-btn" data-difficulty="hardcore">HARDCORE</button>
+        </div>
+    </div>
+
+    <!-- Game wrapper -->
     <div class="game-wrapper">
         <div id="game-container"></div>
 
@@ -194,6 +253,21 @@
     </div>
 
     <div class="footer-text">POWERED BY NIGHTMARE</div>
+
+    <script>
+        // Gérer le menu de difficulté
+        document.querySelectorAll('.difficulty-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const difficulty = e.target.dataset.difficulty;
+                window.GAME_DIFFICULTY = difficulty;
+                document.getElementById('difficulty-menu').style.display = 'none';
+                document.querySelector('.game-wrapper').classList.add('active');
+                
+                // Lancer le jeu
+                import('/src/index.js').catch(err => console.error(err));
+            });
+        });
+    </script>
 
     <script src="/src/index.js"></script>
 </body>

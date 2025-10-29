@@ -73,3 +73,34 @@ export const UI_CONFIG = {
   scoreColor: 0xFFFFFF,
   lifeColor: 0xFF0000
 };
+
+export const DIFFICULTY_CONFIG = {
+  easy: {
+    playerSpeed: 1.5,  // 1.5x plus rapide
+    enemies: 2,         // 2 fantômes
+    lives: 5,
+    boss: false,
+    specialPellets: 1.0  // 100% spawn rate
+  },
+  normal: {
+    playerSpeed: 1.25,  // 1.25x plus rapide (default)
+    enemies: 4,
+    lives: 3,
+    boss: true,
+    specialPellets: 1.0
+  },
+  hard: {
+    playerSpeed: 1.10,  // 1.10x plus rapide
+    enemies: 4,
+    lives: 2,
+    boss: true,
+    specialPellets: 0.5  // 50% spawn rate
+  },
+  hardcore: {
+    playerSpeed: 1.10,
+    enemies: 4,
+    lives: 1,
+    boss: true,
+    specialPellets: 0.0  // No special pellets
+  }
+};
