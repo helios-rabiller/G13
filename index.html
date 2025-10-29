@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>👻 Pachorman - Horror Pac-Man</title>
+    <title>PACHORMAN</title>
+    <link href="https://fonts.googleapis.com/css2?family=Creepster&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -11,20 +12,62 @@
             box-sizing: border-box;
         }
 
-        body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #1a0033 0%, #330066 100%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            color: #fff;
+        @keyframes flicker {
+            0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+                text-shadow: 0 0 10px #FF0000, 0 0 20px #FF0000;
+                color: #FF0000;
+            }
+            20%, 24%, 55% {
+                text-shadow: none;
+                color: #330000;
+            }
         }
 
+        @keyframes pulse {
+            0%, 100% { box-shadow: inset 0 0 30px rgba(255, 0, 0, 0.3); }
+            50% { box-shadow: inset 0 0 50px rgba(255, 0, 0, 0.6); }
+        }
+
+        body {
+            font-family: 'Creepster', cursive;
+            background: #0a0a0a;
+            color: #FF0000;
+            overflow: hidden;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Titre horror */
+        #title {
+            font-size: 64px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 30px;
+            animation: flicker 0.15s infinite;
+            letter-spacing: 8px;
+            text-transform: uppercase;
+            text-shadow: 0 0 20px #FF0000, 0 0 40px #8B0000;
+        }
+
+        /* Layout principal */
+        .game-wrapper {
+            display: flex;
+            gap: 40px;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+
+        /* Game canvas */
         #game-container {
-            box-shadow: 0 0 40px rgba(255, 0, 0, 0.5);
-            border: 3px solid #FF0000;
-            border-radius: 10px;
+            box-shadow: 
+                0 0 40px rgba(255, 0, 0, 0.8),
+                inset 0 0 20px rgba(255, 0, 0, 0.3);
+            border: 4px solid #FF0000;
+            animation: pulse 2s infinite;
             overflow: hidden;
         }
 
@@ -33,43 +76,124 @@
             background: #000;
         }
 
-        .info {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 15px;
-            border-radius: 5px;
+        /* Sidebar UI */
+        .ui-panel {
+            background: rgba(0, 0, 0, 0.95);
+            border: 3px solid #FF0000;
+            padding: 25px;
+            border-radius: 0;
+            min-width: 280px;
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .ui-section {
+            border-bottom: 2px solid #FF0000;
+            padding-bottom: 15px;
+        }
+
+        .ui-section:last-child {
+            border-bottom: none;
+        }
+
+        .ui-label {
             font-size: 14px;
+            letter-spacing: 2px;
+            opacity: 0.7;
+            margin-bottom: 5px;
         }
 
-        .info h3 {
-            color: #FF6666;
-            margin-bottom: 10px;
+        .ui-value {
+            font-size: 28px;
+            font-weight: bold;
+            text-shadow: 0 0 10px #FF0000;
         }
 
-        .info p {
-            margin: 5px 0;
+        .lives-display {
+            display: flex;
+            gap: 8px;
         }
 
-        .key {
-            display: inline-block;
-            background: #333;
-            padding: 2px 6px;
-            border-radius: 3px;
-            margin: 0 2px;
+        .life-icon {
+            width: 24px;
+            height: 24px;
+            background: #FF0000;
+            border: 1px solid #FF0000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .life-icon.dead {
+            background: transparent;
+            opacity: 0.3;
+        }
+
+        /* Controls info */
+        .controls {
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid #FF0000;
+            padding: 15px;
+            font-size: 12px;
+            line-height: 1.6;
+            opacity: 0.8;
+        }
+
+        .key-hint {
+            color: #FF8888;
+            font-weight: bold;
+        }
+
+        /* Footer */
+        .footer-text {
+            position: absolute;
+            bottom: 20px;
+            font-size: 11px;
+            opacity: 0.5;
+            letter-spacing: 1px;
         }
     </style>
 </head>
 <body>
-    <div id="game-container"></div>
-    
-    <div class="info">
-        <h3>🎮 Contrôles</h3>
-        <p><span class="key">↑↓←→</span> ou <span class="key">ZQSD</span> pour se déplacer</p>
-        <p><strong>Objectif :</strong> Manger toutes les pastilles</p>
-        <p><strong>Fuis :</strong> Les fantômes terrifiants</p>
+    <div id="title">PACHORMAN</div>
+
+    <div class="game-wrapper">
+        <div id="game-container"></div>
+
+        <div class="ui-panel">
+            <div class="ui-section">
+                <div class="ui-label">SCORE</div>
+                <div class="ui-value" id="score-display">0</div>
+            </div>
+
+            <div class="ui-section">
+                <div class="ui-label">NIVEAU</div>
+                <div class="ui-value" id="level-display">1</div>
+            </div>
+
+            <div class="ui-section">
+                <div class="ui-label">VIES</div>
+                <div class="lives-display" id="lives-display">
+                    <div class="life-icon"></div>
+                    <div class="life-icon"></div>
+                    <div class="life-icon"></div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <div class="ui-label">CONTRÔLES</div>
+                <p>
+                    <span class="key-hint">↑↓←→</span><br>
+                    ou<br>
+                    <span class="key-hint">Z Q S D</span>
+                </p>
+            </div>
+        </div>
     </div>
+
+    <div class="footer-text">POWERED BY NIGHTMARE</div>
 
     <script src="/src/index.js"></script>
 </body>
