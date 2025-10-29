@@ -1,27 +1,33 @@
 /**
- * Player Entity
- * Contrôlé par le joueur
+ * Player Entity - TILE-BASED MOVEMENT
+ * Contrôlé par le joueur avec mouvement bloc par bloc
  */
 
-import { PLAYER_CONFIG } from '../config.js';
+import { PLAYER_CONFIG, WORLD_CONFIG, GAME_CONFIG } from '../config.js';
 
 export class Player {
-  constructor(scene, x, y, maze) {
+  constructor(scene, maze) {
     this.scene = scene;
     this.maze = maze;
-    this.x = x || PLAYER_CONFIG.startX;
-    this.y = y || PLAYER_CONFIG.startY;
-    this.width = PLAYER_CONFIG.width;
-    this.height = PLAYER_CONFIG.height;
-    this.speed = PLAYER_CONFIG.speed;
-    this.radius = this.width / 2;
+    this.tileSize = WORLD_CONFIG.tileSize;
     
-    this.velocityX = 0;
-    this.velocityY = 0;
-    this.nextDirectionX = 0;
-    this.nextDirectionY = 0;
+    // Position EN TILES (pas pixels)
+    this.tileX = Math.floor(GAME_CONFIG.width / this.tileSize / 2);
+    this.tileY = Math.floor(GAME_CONFIG.height / this.tileSize - 3);
     
-    this.pelletsEaten = 0;
+    // Direction actuelle
+    this.dirX = 0;
+    this.dirY = 0;
+    
+    // Direction demandée (input)
+    this.nextDirX = 0;
+    this.nextDirY = 0;
+    
+    // Timing du mouvement (bloc par bloc)
+    this.moveTimer = 0;
+    this.moveDelay = 150;  // ms par bloc (1.25x = 120px/s => ~150ms pour 32px)
+    
+    // Stats
     this.score = 0;
     this.lives = 3;
     this.invulnerable = false;
@@ -31,89 +37,92 @@ export class Player {
   }
 
   create() {
-    // Créer le sprite du joueur
     this.sprite = this.scene.add.rectangle(
-      this.x,
-      this.y,
-      this.width,
-      this.height,
+      this.getPixelX(),
+      this.getPixelY(),
+      this.tileSize - 4,
+      this.tileSize - 4,
       PLAYER_CONFIG.color
     );
     this.sprite.setOrigin(0.5);
     this.sprite.setDepth(2);
   }
 
+  getPixelX() {
+    return this.tileX * this.tileSize + this.tileSize / 2;
+  }
+
+  getPixelY() {
+    return this.tileY * this.tileSize + this.tileSize / 2;
+  }
+
   update(input, delta) {
-    this.handleInput(input);
-    this.updateMovement(delta);
-    this.updatePosition(delta);
-    
+    // Capturer input - DOIT être remis à zéro chaque frame
+    if (input.left) {
+      this.nextDirX = -1;
+      this.nextDirY = 0;
+    }
+    if (input.right) {
+      this.nextDirX = 1;
+      this.nextDirY = 0;
+    }
+    if (input.up) {
+      this.nextDirX = 0;
+      this.nextDirY = -1;
+    }
+    if (input.down) {
+      this.nextDirX = 0;
+      this.nextDirY = 1;
+    }
+
+    // Avancer le timer
+    this.moveTimer += delta;
+
+    // Quand il est temps de bouger (bloc par bloc)
+    if (this.moveTimer >= this.moveDelay) {
+      this.moveTimer -= this.moveDelay;
+      this.tryMove();
+    }
+
+    // Mettre à jour sprite position
+    this.sprite.x = this.getPixelX();
+    this.sprite.y = this.getPixelY();
+
+    // Invulnérabilité
     if (this.invulnerable) {
       this.invulnerableTimer -= delta;
       if (this.invulnerableTimer <= 0) {
         this.invulnerable = false;
+        this.sprite.setAlpha(1);
       }
     }
   }
 
-  handleInput(input) {
-    // Permettre le buffering de direction
-    if (input.left) {
-      this.nextDirectionX = -1;
-      this.nextDirectionY = 0;
-    } else if (input.right) {
-      this.nextDirectionX = 1;
-      this.nextDirectionY = 0;
-    } else if (input.up) {
-      this.nextDirectionX = 0;
-      this.nextDirectionY = -1;
-    } else if (input.down) {
-      this.nextDirectionX = 0;
-      this.nextDirectionY = 1;
-    }
-  }
-
-  updateMovement(delta) {
-    // Essayer de changer de direction
-    if (this.nextDirectionX !== 0 || this.nextDirectionY !== 0) {
-      if (this.canMove(this.nextDirectionX, this.nextDirectionY)) {
-        this.velocityX = this.nextDirectionX;
-        this.velocityY = this.nextDirectionY;
+  tryMove() {
+    // Essayer direction demandée d'abord (changement de direction)
+    if (this.nextDirX !== 0 || this.nextDirY !== 0) {
+      if (this.canMove(this.nextDirX, this.nextDirY)) {
+        this.dirX = this.nextDirX;
+        this.dirY = this.nextDirY;
       }
     }
-  }
 
-  updatePosition(delta) {
-    const deltaSeconds = delta / 1000;
-    
-    // Calculer nouvelle position
-    let newX = this.x + this.velocityX * this.speed * deltaSeconds;
-    let newY = this.y + this.velocityY * this.speed * deltaSeconds;
-
-    // Vérifier les collisions avec les murs
-    if (!this.maze.checkCollision(newX - this.width / 2, newY - this.height / 2, this.width, this.height)) {
-      this.x = newX;
-      this.y = newY;
+    // Puis bouger dans la direction actuelle
+    if (this.dirX !== 0 || this.dirY !== 0) {
+      if (this.canMove(this.dirX, this.dirY)) {
+        this.tileX += this.dirX;
+        this.tileY += this.dirY;
+      }
     }
-    
-    this.sprite.x = Math.round(this.x);
-    this.sprite.y = Math.round(this.y);
   }
 
   canMove(dirX, dirY) {
-    // Vérifier si on peut se déplacer dans cette direction
-    const testX = this.x + dirX * 5;
-    const testY = this.y + dirY * 5;
-    return !this.maze.checkCollision(
-      testX - this.width / 2,
-      testY - this.height / 2,
-      this.width,
-      this.height
-    );
+    const newX = this.tileX + dirX;
+    const newY = this.tileY + dirY;
+    return this.maze.isWalkable(newX, newY);
   }
 
   eatPellet(value) {
-    this.pelletsEaten += 1;
     this.score += value;
   }
 
@@ -121,46 +130,31 @@ export class Player {
     if (!this.invulnerable) {
       this.lives -= 1;
       this.invulnerable = true;
-      this.invulnerableTimer = 2000; // 2 secondes d'invulnérabilité
-      
-      // Animation de flash
+      this.invulnerableTimer = 2000;
       this.sprite.setAlpha(0.5);
-      
       return this.lives > 0;
     }
     return true;
   }
 
   reset() {
-    this.x = PLAYER_CONFIG.startX;
-    this.y = PLAYER_CONFIG.startY;
-    
-    // Ajuster à une position valide
-    const validPos = this.maze.findNearestWalkable(this.x, this.y);
-    this.x = validPos.x;
-    this.y = validPos.y;
-    
-    this.velocityX = 0;
-    this.velocityY = 0;
-    this.nextDirectionX = 0;
-    this.nextDirectionY = 0;
+    this.tileX = Math.floor(GAME_CONFIG.width / this.tileSize / 2);
+    this.tileY = Math.floor(GAME_CONFIG.height / this.tileSize - 3);
+    this.dirX = 0;
+    this.dirY = 0;
+    this.nextDirX = 0;
+    this.nextDirY = 0;
+    this.moveTimer = 0;
     this.invulnerable = false;
     this.sprite.setAlpha(1);
-    this.sprite.x = this.x;
-    this.sprite.y = this.y;
   }
 
   getPosition() {
-    return { x: this.x, y: this.y };
+    return { x: this.getPixelX(), y: this.getPixelY() };
   }
 
-  getBounds() {
-    return {
-      x: this.x - this.width / 2,
-      y: this.y - this.height / 2,
-      width: this.width,
-      height: this.height
-    };
+  getTilePosition() {
+    return { x: this.tileX, y: this.tileY };
   }
 
   destroy() {

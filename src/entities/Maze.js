@@ -40,7 +40,7 @@ export class Maze {
     const midRow = Math.floor(this.rows / 2);
 
     // Murs verticaux au centre
-    for (let y = 2; y < this.rows - 2; y++) {
+    for (let y = 2; y < this.rows - 5; y++) {
       if (y % 3 === 0) {
         grid[y][midCol] = 1;
         grid[y][midCol - 5] = 1;
@@ -48,12 +48,14 @@ export class Maze {
       }
     }
 
-    // Murs horizontaux
+    // Murs horizontaux - ÉVITER LE BAS
     for (let x = 2; x < this.cols - 2; x++) {
       if (x % 4 === 0) {
         grid[3][x] = 1;
         grid[midRow][x] = 1;
-        grid[this.rows - 4][x] = 1;
+        if (midRow + 6 < this.rows - 3) {
+          grid[midRow + 6][x] = 1;
+        }
       }
     }
 
@@ -66,6 +68,19 @@ export class Maze {
     for (let y = spawnTop; y <= spawnBottom; y++) {
       for (let x = spawnLeft; x <= spawnRight; x++) {
         if (y >= 0 && y < this.rows && x >= 0 && x < this.cols) {
+          grid[y][x] = 0;
+        }
+      }
+    }
+
+    // Zone joueur en bas - ZONE LIBRE
+    const playerZoneTop = this.rows - 4;
+    const playerZoneLeft = midCol - 4;
+    const playerZoneRight = midCol + 4;
+    
+    for (let y = playerZoneTop; y < this.rows - 1; y++) {
+      for (let x = playerZoneLeft; x <= playerZoneRight; x++) {
+        if (x >= 0 && x < this.cols) {
           grid[y][x] = 0;
         }
       }

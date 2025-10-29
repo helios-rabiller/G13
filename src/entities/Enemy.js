@@ -1,185 +1,202 @@
 /**
- * Enemy (Ghost) Entity
- * IA des fantômes avec comportements différents
+ * Enemy Entity - TILE-BASED MOVEMENT
+ * IA avec mouvement bloc par bloc linéaire
  */
 
-import { ENEMY_CONFIG, ENEMY_AI } from '../config.js';
+import { ENEMY_CONFIG, WORLD_CONFIG, ENEMY_AI } from '../config.js';
 
 export class Enemy {
   constructor(scene, config, maze) {
     this.scene = scene;
     this.maze = maze;
+    this.tileSize = WORLD_CONFIG.tileSize;
+    
     this.name = config.name;
     this.color = config.color;
-    this.x = config.x;
-    this.y = config.y;
-    this.width = ENEMY_CONFIG.width;
-    this.height = ENEMY_CONFIG.height;
-    this.speed = ENEMY_CONFIG.baseSpeed;
-    this.radius = this.width / 2;
     
-    this.velocityX = 0;
-    this.velocityY = 0;
-    this.direction = 'right';
+    // Position EN TILES
+    this.tileX = Math.floor(config.x / this.tileSize);
+    this.tileY = Math.floor(config.y / this.tileSize);
     
+    // Direction linéaire (une seule direction à la fois)
+    this.dirX = 0;
+    this.dirY = 0;
+    
+    // Timing du mouvement (bloc par bloc)
+    this.moveTimer = 0;
+    this.moveDelay = 200;  // Plus lent que le joueur (120px/s)
+    
+    // IA
+    this.aiTimer = 0;
+    this.aiDelay = ENEMY_AI.updateFrequency;  // 500ms
+    this.targetX = this.tileX;
+    this.targetY = this.tileY;
     this.mode = 'scatter';
-    this.lastDecisionTime = 0;
-    this.targetX = config.x;
-    this.targetY = config.y;
     
     this.create();
   }
 
   create() {
     this.sprite = this.scene.add.rectangle(
-      this.x,
-      this.y,
-      this.width,
-      this.height,
+      this.getPixelX(),
+      this.getPixelY(),
+      WORLD_CONFIG.tileSize - 4,
+      WORLD_CONFIG.tileSize - 4,
       this.color
     );
     this.sprite.setOrigin(0.5);
     this.sprite.setDepth(2);
   }
 
+  getPixelX() {
+    return this.tileX * this.tileSize + this.tileSize / 2;
+  }
+
+  getPixelY() {
+    return this.tileY * this.tileSize + this.tileSize / 2;
+  }
+
   update(playerPos, delta) {
-    // Mettre à jour la décision d'IA
-    this.lastDecisionTime += delta;
-    if (this.lastDecisionTime >= ENEMY_AI.updateFrequency) {
-      this.lastDecisionTime = 0;
+    // Update IA decision
+    this.aiTimer += delta;
+    if (this.aiTimer >= this.aiDelay) {
+      this.aiTimer -= this.aiDelay;
       this.updateAI(playerPos);
     }
 
-    this.updateMovement(delta);
+    // Timer mouvement
+    this.moveTimer += delta;
+    if (this.moveTimer >= this.moveDelay) {
+      this.moveTimer -= this.moveDelay;
+      this.tryMove();
+    }
+
+    // Update sprite
+    this.sprite.x = this.getPixelX();
+    this.sprite.y = this.getPixelY();
   }
 
   updateAI(playerPos) {
-    const distance = this.distanceTo(playerPos);
-    
-    // Décider le mode
-    if (distance < ENEMY_AI.chaseDistance) {
+    const playerTile = {
+      x: Math.floor(playerPos.x / this.tileSize),
+      y: Math.floor(playerPos.y / this.tileSize)
+    };
+
+    const distance = Math.abs(playerTile.x - this.tileX) + Math.abs(playerTile.y - this.tileY);
+
+    // Décider mode
+    if (distance < ENEMY_AI.chaseDistance / WORLD_CONFIG.tileSize) {
       this.mode = 'chase';
+      this.chasePlayer(playerTile);
     } else {
       this.mode = 'scatter';
-    }
-
-    // Calculer la cible selon le type d'ennemi et le mode
-    if (this.mode === 'chase') {
-      this.chasePlayer(playerPos);
-    } else {
       this.scatter();
     }
   }
 
-  chasePlayer(playerPos) {
+  chasePlayer(playerTile) {
     switch (this.name) {
       case 'red':
-        // Poursuite directe
-        this.targetX = playerPos.x;
-        this.targetY = playerPos.y;
+        this.targetX = playerTile.x;
+        this.targetY = playerTile.y;
         break;
-      
       case 'pink':
-        // Anticipe la position du joueur
-        this.targetX = playerPos.x + 50;
-        this.targetY = playerPos.y - 50;
+        this.targetX = playerTile.x + 2;
+        this.targetY = playerTile.y - 2;
         break;
-      
       case 'blue':
-        // Triangulation complexe
-        this.targetX = playerPos.x - 100;
-        this.targetY = playerPos.y + 100;
+        this.targetX = playerTile.x - 3;
+        this.targetY = playerTile.y + 3;
         break;
-      
       case 'yellow':
-        // Aléatoire / chaotique
-        this.targetX = playerPos.x + (Math.random() - 0.5) * 200;
-        this.targetY = playerPos.y + (Math.random() - 0.5) * 200;
+        this.targetX = playerTile.x + (Math.random() > 0.5 ? 2 : -2);
+        this.targetY = playerTile.y + (Math.random() > 0.5 ? 2 : -2);
         break;
     }
   }
 
   scatter() {
-    // Patrouiller dans un coin aléatoire
+    // Coins aléatoires
     const corners = [
-      { x: 50, y: 50 },
-      { x: 750, y: 50 },
-      { x: 50, y: 550 },
-      { x: 750, y: 550 }
+      { x: 2, y: 2 },
+      { x: Math.floor(800 / WORLD_CONFIG.tileSize) - 2, y: 2 },
+      { x: 2, y: Math.floor(600 / WORLD_CONFIG.tileSize) - 2 },
+      { x: Math.floor(800 / WORLD_CONFIG.tileSize) - 2, y: Math.floor(600 / WORLD_CONFIG.tileSize) - 2 }
     ];
     const corner = corners[Math.floor(Math.random() * corners.length)];
     this.targetX = corner.x;
     this.targetY = corner.y;
   }
 
-  updateMovement(delta) {
-    const deltaSeconds = delta / 1000;
-    const dx = this.targetX - this.x;
-    const dy = this.targetY - this.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
+  tryMove() {
+    const dx = this.targetX - this.tileX;
+    const dy = this.targetY - this.tileY;
 
-    if (distance > 5) {
-      this.velocityX = (dx / distance) * this.speed;
-      this.velocityY = (dy / distance) * this.speed;
-    } else {
-      this.velocityX = 0;
-      this.velocityY = 0;
+    // Choisir direction - AXE PRIORITAIRE UNIQUEMENT
+    const distX = Math.abs(dx);
+    const distY = Math.abs(dy);
+
+    let newDirX = 0;
+    let newDirY = 0;
+
+    if (distX > distY && dx !== 0) {
+      newDirX = dx > 0 ? 1 : -1;
+      newDirY = 0;
+    } else if (dy !== 0) {
+      newDirX = 0;
+      newDirY = dy > 0 ? 1 : -1;
     }
 
-    // Calculer nouvelle position
-    let newX = this.x + this.velocityX * deltaSeconds;
-    let newY = this.y + this.velocityY * deltaSeconds;
-
-    // Vérifier les collisions
-    if (!this.maze.checkCollision(newX - this.width / 2, newY - this.height / 2, this.width, this.height)) {
-      this.x = newX;
-      this.y = newY;
-    } else {
-      // Si collision, changer de direction
-      this.findNewTarget();
+    // Essayer la direction
+    if (newDirX !== 0 || newDirY !== 0) {
+      if (this.canMove(newDirX, newDirY)) {
+        this.dirX = newDirX;
+        this.dirY = newDirY;
+        this.tileX += this.dirX;
+        this.tileY += this.dirY;
+      } else {
+        // Si collision, chercher nouvelle direction
+        this.findNewDirection();
+      }
     }
-
-    this.sprite.x = Math.round(this.x);
-    this.sprite.y = Math.round(this.y);
   }
 
-  findNewTarget() {
-    // Trouver une nouvelle direction valide
+  findNewDirection() {
+    // Tester les 4 directions cardinales
     const directions = [
-      { x: this.x + 50, y: this.y },
-      { x: this.x - 50, y: this.y },
-      { x: this.x, y: this.y + 50 },
-      { x: this.x, y: this.y - 50 }
+      { x: 1, y: 0 },
+      { x: -1, y: 0 },
+      { x: 0, y: 1 },
+      { x: 0, y: -1 }
     ];
 
-    const validDirs = directions.filter(
-      dir => !this.maze.checkCollision(dir.x - this.width / 2, dir.y - this.height / 2, this.width, this.height)
-    );
+    const valid = directions.filter(dir => this.canMove(dir.x, dir.y));
 
-    if (validDirs.length > 0) {
-      const random = validDirs[Math.floor(Math.random() * validDirs.length)];
-      this.targetX = random.x;
-      this.targetY = random.y;
+    if (valid.length > 0) {
+      const chosen = valid[Math.floor(Math.random() * valid.length)];
+      this.dirX = chosen.x;
+      this.dirY = chosen.y;
+      this.tileX += this.dirX;
+      this.tileY += this.dirY;
+      
+      // Set new target
+      this.targetX = this.tileX + chosen.x * 5;
+      this.targetY = this.tileY + chosen.y * 5;
     }
   }
 
-  distanceTo(pos) {
-    const dx = pos.x - this.x;
-    const dy = pos.y - this.y;
-    return Math.sqrt(dx * dx + dy * dy);
+  canMove(dirX, dirY) {
+    const newX = this.tileX + dirX;
+    const newY = this.tileY + dirY;
+    return this.maze.isWalkable(newX, newY);
   }
 
   getPosition() {
-    return { x: this.x, y: this.y };
+    return { x: this.getPixelX(), y: this.getPixelY() };
   }
 
-  getBounds() {
-    return {
-      x: this.x - this.width / 2,
-      y: this.y - this.height / 2,
-      width: this.width,
-      height: this.height
-    };
+  getTilePosition() {
+    return { x: this.tileX, y: this.tileY };
   }
 
   destroy() {

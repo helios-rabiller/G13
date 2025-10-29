@@ -25,20 +25,13 @@ export class GameScene extends Phaser.Scene {
     this.maze = new Maze(GAME_CONFIG.width, GAME_CONFIG.height, WORLD_CONFIG.tileSize);
     this.maze.render(this);
 
-    // Initialiser les entités
-    const playerSpawn = this.findSpawnPoint(0.5, 0.9);
-    this.player = new Player(this, playerSpawn.x, playerSpawn.y, this.maze);
+    // Initialiser le joueur (tile-based)
+    this.player = new Player(this, this.maze);
     
+    // Initialiser ennemis (tile-based)
     this.enemies = [];
-    const spawns = [
-      { ...ENEMY_CONFIG.spawns[0], y: 100 },
-      { ...ENEMY_CONFIG.spawns[1], y: 100 },
-      { ...ENEMY_CONFIG.spawns[2], y: GAME_CONFIG.height - 100 },
-      { ...ENEMY_CONFIG.spawns[3], y: GAME_CONFIG.height - 100 }
-    ];
-    spawns.forEach(config => {
-      const spawnPoint = this.findSpawnPoint(config.x / GAME_CONFIG.width, config.y / GAME_CONFIG.height);
-      this.enemies.push(new Enemy(this, { ...config, x: spawnPoint.x, y: spawnPoint.y }, this.maze));
+    ENEMY_CONFIG.spawns.forEach(config => {
+      this.enemies.push(new Enemy(this, config, this.maze));
     });
 
     // Gérer les pièces
@@ -50,15 +43,16 @@ export class GameScene extends Phaser.Scene {
     this.hud.updateLevel(this.level);
     this.hud.updateLives(this.player.lives);
 
-    // Input
+    // Input - curseurs et ZQSD (clavier AZERTY français)
     this.cursors = this.input.keyboard.createCursorKeys();
-    this.wasdKeys = this.input.keyboard.addKeys('W,A,S,D');
-  }
+    this.zqsdKeys = this.input.keyboard.addKeys({
+      up: Phaser.Input.Keyboard.KeyCodes.Z,
+      left: Phaser.Input.Keyboard.KeyCodes.Q,
+      down: Phaser.Input.Keyboard.KeyCodes.S,
+      right: Phaser.Input.Keyboard.KeyCodes.D
+    });
 
-  findSpawnPoint(ratioX, ratioY) {
-    const x = GAME_CONFIG.width * ratioX;
-    const y = GAME_CONFIG.height * ratioY;
-    return this.maze.findNearestWalkable(x, y);
+    console.log('Game initialized - Tile-based movement');
   }
 
   update(time, delta) {
@@ -66,10 +60,10 @@ export class GameScene extends Phaser.Scene {
 
     // Update joueur
     const input = {
-      left: this.cursors.left.isDown || this.wasdKeys.A.isDown,
-      right: this.cursors.right.isDown || this.wasdKeys.D.isDown,
-      up: this.cursors.up.isDown || this.wasdKeys.W.isDown,
-      down: this.cursors.down.isDown || this.wasdKeys.S.isDown
+      left: this.cursors.left.isDown || this.zqsdKeys.left.isDown,
+      right: this.cursors.right.isDown || this.zqsdKeys.right.isDown,
+      up: this.cursors.up.isDown || this.zqsdKeys.up.isDown,
+      down: this.cursors.down.isDown || this.zqsdKeys.down.isDown
     };
     this.player.update(input, delta);
 
@@ -109,11 +103,8 @@ export class GameScene extends Phaser.Scene {
 
   checkEnemyCollisions() {
     this.enemies.forEach(enemy => {
-      const dx = enemy.x - this.player.x;
-      const dy = enemy.y - this.player.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-
-      if (distance < this.player.radius + enemy.radius) {
+      // Collision en tiles (plus simple et fiable)
+      if (enemy.tileX === this.player.tileX && enemy.tileY === this.player.tileY) {
         const alive = this.player.hitByEnemy();
         if (!alive) {
           this.gameActive = false;
