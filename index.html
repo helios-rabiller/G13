@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>👻 Pachorman - Horror Pac-Man</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1a0033 0%, #330066 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        #game-container {
+            box-shadow: 0 0 40px rgba(255, 0, 0, 0.5);
+            border: 3px solid #FF0000;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            background: #000;
+        }
+
+        .info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .info h3 {
+            color: #FF6666;
+            margin-bottom: 10px;
+        }
+
+        .info p {
+            margin: 5px 0;
+        }
+
+        .key {
+            display: inline-block;
+            background: #333;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin: 0 2px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container"></div>
+    
+    <div class="info">
+        <h3>🎮 Contrôles</h3>
+        <p><span class="key">↑↓←→</span> ou <span class="key">ZQSD</span> pour se déplacer</p>
+        <p><strong>Objectif :</strong> Manger toutes les pastilles</p>
+        <p><strong>Fuis :</strong> Les fantômes terrifiants</p>
+    </div>
+
+    <script src="/src/index.js"></script>
+</body>
+</html>
