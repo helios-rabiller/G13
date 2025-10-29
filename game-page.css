@@ -1,0 +1,311 @@
+/* Game Page Specific Styles */
+
+.game-hero {
+    min-height: 60vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 0 4rem;
+    margin-top: 100px;
+    overflow: hidden;
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(0, 206, 209, 0.1) 100%);
+}
+
+.game-hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 30% 50%, rgba(0, 206, 209, 0.2) 0%, transparent 50%),
+                radial-gradient(circle at 70% 60%, rgba(255, 215, 0, 0.15) 0%, transparent 50%);
+    animation: pulse 8s ease-in-out infinite;
+}
+
+.game-hero-content {
+    text-align: center;
+    z-index: 1;
+}
+
+.game-title {
+    font-size: clamp(3rem, 10vw, 8rem);
+    font-weight: 900;
+    line-height: 1;
+    margin-bottom: 1.5rem;
+    background: linear-gradient(135deg, var(--yellow), var(--turquoise));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: fadeIn 1s ease forwards;
+}
+
+.game-subtitle {
+    font-size: clamp(1rem, 2vw, 1.5rem);
+    color: var(--text-secondary);
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    animation: fadeIn 1s ease forwards 0.3s;
+    opacity: 0;
+    animation-fill-mode: forwards;
+}
+
+@keyframes fadeIn {
+    to { opacity: 1; }
+}
+
+/* Game Details Section */
+.game-details {
+    padding: 8rem 4rem;
+    background: var(--primary-bg);
+}
+
+.game-container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.game-image-main {
+    width: 100%;
+    margin-bottom: 4rem;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 206, 209, 0.3);
+    animation: slideUp 1s ease forwards;
+    opacity: 0;
+}
+
+@keyframes slideUp {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.game-image-main {
+    transform: translateY(50px);
+}
+
+.game-image-main img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* Game Info Section */
+.game-info-section {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 4rem;
+}
+
+.game-description h2 {
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 800;
+    margin-bottom: 2rem;
+    background: linear-gradient(135deg, var(--yellow), var(--turquoise));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.game-description p {
+    font-size: 1.2rem;
+    line-height: 1.8;
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+}
+
+/* Game Features */
+.game-features {
+    background: var(--secondary-bg);
+    padding: 3rem;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.game-features h3 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 2rem;
+    background: linear-gradient(135deg, var(--yellow), var(--turquoise));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.game-features ul {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+
+.game-features li {
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    padding-left: 2rem;
+    position: relative;
+}
+
+.game-features li::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: var(--turquoise);
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+/* Game Specs */
+.game-specs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 2rem;
+    padding: 3rem;
+    background: var(--secondary-bg);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.spec-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.spec-label {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.spec-value {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* CTA Buttons */
+.game-cta {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+    margin-top: 3rem;
+}
+
+.btn-primary,
+.btn-secondary {
+    display: inline-block;
+    padding: 1.2rem 3rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    text-decoration: none;
+    border-radius: 50px;
+    transition: all 0.3s var(--transition-smooth);
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--yellow), var(--turquoise));
+    color: var(--primary-bg);
+    box-shadow: 0 10px 30px rgba(0, 206, 209, 0.3);
+}
+
+.btn-primary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 15px 40px rgba(0, 206, 209, 0.5);
+}
+
+.btn-secondary {
+    background: transparent;
+    color: var(--text-primary);
+    border: 2px solid var(--turquoise);
+}
+
+.btn-secondary:hover {
+    background: var(--turquoise);
+    color: var(--primary-bg);
+    transform: translateY(-3px);
+}
+
+/* Back Section */
+.back-section {
+    padding: 4rem;
+    text-align: center;
+    background: var(--secondary-bg);
+}
+
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 1rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 1.1rem;
+    letter-spacing: 0.05em;
+    transition: all 0.3s ease;
+}
+
+.back-link:hover {
+    color: var(--text-primary);
+    transform: translateX(-5px);
+}
+
+.back-link span {
+    background: linear-gradient(135deg, var(--yellow), var(--turquoise));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Responsive Design */
+@media (max-width: 968px) {
+    .game-hero {
+        min-height: 50vh;
+        padding: 0 2rem;
+        margin-top: 80px;
+    }
+
+    .game-details {
+        padding: 4rem 2rem;
+    }
+
+    .game-features ul {
+        grid-template-columns: 1fr;
+    }
+
+    .game-specs {
+        grid-template-columns: 1fr;
+    }
+
+    .game-cta {
+        flex-direction: column;
+    }
+
+    .btn-primary,
+    .btn-secondary {
+        width: 100%;
+        text-align: center;
+    }
+
+    .back-section {
+        padding: 2rem;
+    }
+}
+
+@media (max-width: 600px) {
+    .game-hero {
+        margin-top: 60px;
+    }
+
+    .game-features,
+    .game-specs {
+        padding: 2rem;
+    }
+}
