@@ -1,0 +1,1604 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OutRun Arcade - Retro Racing Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            font-family: 'Courier New', monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        #gameContainer {
+            position: relative;
+            box-shadow: 0 0 50px rgba(255, 0, 255, 0.5);
+        }
+
+        #gameCanvas {
+            display: block;
+            background: #72d7ee;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+
+        #startScreen, #gameOverScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            text-align: center;
+            z-index: 10;
+        }
+
+        #startScreen h1 {
+            font-size: 64px;
+            color: #ff1493;
+            text-shadow: 4px 4px 0 #00ffff, 8px 8px 0 #000;
+            margin-bottom: 20px;
+            animation: neon 1.5s ease-in-out infinite alternate;
+        }
+
+        @keyframes neon {
+            from { text-shadow: 4px 4px 0 #00ffff, 8px 8px 0 #000, 0 0 20px #ff1493; }
+            to { text-shadow: 4px 4px 0 #00ffff, 8px 8px 0 #000, 0 0 40px #ff1493, 0 0 60px #ff1493; }
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #ff1493, #00ffff);
+            color: #000;
+            border: none;
+            padding: 20px 40px;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px;
+            text-transform: uppercase;
+            box-shadow: 0 4px 0 #000, 0 8px 20px rgba(255, 20, 147, 0.5);
+            transition: transform 0.1s;
+        }
+
+        .btn:hover {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #000, 0 4px 10px rgba(255, 20, 147, 0.5);
+        }
+
+        .instructions {
+            color: #00ffff;
+            margin: 20px;
+            font-size: 18px;
+            line-height: 1.6;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        #gameOverScreen h2 {
+            font-size: 48px;
+            color: #ff1493;
+            margin-bottom: 20px;
+        }
+
+        .score-display {
+            font-size: 32px;
+            color: #00ffff;
+            margin: 10px 0;
+        }
+        
+        .letter-input {
+            width: 60px;
+            height: 80px;
+            font-size: 48px;
+            font-weight: bold;
+            text-align: center;
+            background: #000;
+            color: #00ffff;
+            border: 3px solid #ff1493;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            box-shadow: 0 0 20px rgba(255, 20, 147, 0.5);
+        }
+        
+        .letter-input:focus {
+            outline: none;
+            border-color: #00ffff;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.8);
+        }
+        
+        #highScoreTable {
+            margin: 30px 0;
+        }
+        
+        #highScoreTable table {
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #ff1493;
+            box-shadow: 0 0 30px rgba(255, 20, 147, 0.5);
+        }
+        
+        #highScoreTable tr {
+            border-bottom: 1px solid #444;
+        }
+        
+        #highScoreTable tr:hover {
+            background: rgba(255, 20, 147, 0.2);
+        }
+        
+        #highScoreTable .new-score {
+            background: rgba(0, 255, 255, 0.2);
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { background: rgba(0, 255, 255, 0.2); }
+            50% { background: rgba(255, 20, 147, 0.3); }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div id="startScreen">
+            <h1>🏎️ OUTRUN 🏎️</h1>
+            <div class="instructions">
+                <p>🎮 CONTRÔLES 🎮</p>
+                <p>← → : Diriger</p>
+                <p>↑ : Accélérer</p>
+                <p>↓ : Freiner</p>
+                <p><br>Évitez les obstacles et conduisez le plus loin possible!</p>
+                <p style="color: #ff1493; margin-top: 20px;">🔊 Sonic Racing CrossWorlds OST 🔊</p>
+            </div>
+            <button class="btn" onclick="game.start()">DÉMARRER</button>
+        </div>
+
+        <div id="gameOverScreen" class="hidden">
+            <h2>GAME OVER</h2>
+            <div class="score-display">
+                <p>Score: <span id="finalScore">0</span></p>
+                <p>Distance: <span id="finalDistance">0</span> m</p>
+            </div>
+            
+            <div id="nameInput" class="hidden">
+                <p style="color: #00ffff; font-size: 24px; margin: 20px 0;">NOUVEAU RECORD !</p>
+                <p style="color: #fff; font-size: 18px;">Entrez vos initiales :</p>
+                <div style="display: flex; justify-content: center; gap: 10px; margin: 20px 0;">
+                    <input type="text" id="letter1" maxlength="1" class="letter-input" />
+                    <input type="text" id="letter2" maxlength="1" class="letter-input" />
+                    <input type="text" id="letter3" maxlength="1" class="letter-input" />
+                </div>
+                <button class="btn" onclick="game.saveHighScore()">ENREGISTRER</button>
+            </div>
+            
+            <div id="highScoreTable" class="hidden">
+                <h3 style="color: #ff1493; font-size: 32px; margin: 20px 0;">🏆 TOP 5 🏆</h3>
+                <table style="margin: 0 auto; color: #00ffff; font-size: 20px; border-collapse: collapse;">
+                    <thead>
+                        <tr style="color: #ffff00;">
+                            <th style="padding: 10px 20px; text-align: center;">#</th>
+                            <th style="padding: 10px 20px; text-align: left;">NOM</th>
+                            <th style="padding: 10px 20px; text-align: right;">SCORE</th>
+                            <th style="padding: 10px 20px; text-align: right;">DISTANCE</th>
+                        </tr>
+                    </thead>
+                    <tbody id="highScoreList">
+                    </tbody>
+                </table>
+            </div>
+            
+            <button class="btn" id="restartBtn" onclick="game.restart()">REJOUER</button>
+        </div>
+    </div>
+
+    <script>
+        class OutRunGame {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.width = this.canvas.width;
+                this.height = this.canvas.height;
+                
+                // Configuration du moteur pseudo-3D
+                this.roadWidth = 3500; // Route élargie (était 2000)
+                this.segmentLength = 200;
+                this.rumbleLength = 3;
+                this.trackLength = null;
+                this.lanes = 3;
+                this.fieldOfView = 100;
+                this.cameraHeight = 1000;
+                this.drawDistance = 300;
+                
+                // Segments de route
+                this.segments = [];
+                
+                // Joueur
+                this.player = {
+                    x: 0,
+                    y: 0,
+                    z: 0,
+                    speed: 0,
+                    maxSpeed: 12000,
+                    acceleration: 300,
+                    deceleration: 400,
+                    breaking: 800,
+                    turnSpeed: 4000,
+                    centrifugal: 0.3,
+                    width: 80,
+                    height: 50
+                };
+                
+                // État du jeu
+                this.position = 0;
+                this.speed = 0;
+                this.score = 0;
+                this.distance = 0;
+                this.gameRunning = false;
+                this.skyOffset = 0;
+                this.currentTheme = 'mountain'; // Thème actuel
+                this.themeDistance = 0; // Distance dans le thème actuel
+                
+                // Contrôles
+                this.keys = {};
+                
+                // Sprites d'environnement
+                this.sprites = [];
+                
+                // Couleurs
+                this.colors = {
+                    sky: ['#72d7ee', '#f18f01'],
+                    road: {
+                        light: { road: '#6b6b6b', grass: '#10aa10', rumble: '#555555', lane: '#cccccc' },
+                        dark: { road: '#696969', grass: '#009a00', rumble: '#bbbbbb' }
+                    }
+                };
+                
+                // Thèmes de décors
+                this.themes = {
+                    mountain: {
+                        name: 'Montagne',
+                        sky: ['#000033', '#ff1493', '#ffa500'],
+                        grass: '#10aa10',
+                        darkGrass: '#009a00',
+                        sprites: ['tree', 'palm', 'billboard']
+                    },
+                    forest: {
+                        name: 'Forêt',
+                        sky: ['#1a472a', '#2d5f3f', '#4a7c59'],
+                        grass: '#0d5c0d',
+                        darkGrass: '#0a4a0a',
+                        sprites: ['tree', 'tree', 'tree'] // Plus d'arbres
+                    },
+                    city: {
+                        name: 'Ville',
+                        sky: ['#2a0845', '#ff006e', '#ffbe0b'],
+                        grass: '#333333',
+                        darkGrass: '#222222',
+                        sprites: ['building', 'building', 'billboard']
+                    },
+                    desert: {
+                        name: 'Désert',
+                        sky: ['#ff6b35', '#ffa07a', '#ffe4b5'],
+                        grass: '#d4a574',
+                        darkGrass: '#c19a6b',
+                        sprites: ['palm', 'palm', 'billboard']
+                    },
+                    beach: {
+                        name: 'Plage',
+                        sky: ['#4a90e2', '#87ceeb', '#add8e6'],
+                        grass: '#f4e4c1',
+                        darkGrass: '#e8d4a8',
+                        sprites: ['palm', 'billboard', 'palm']
+                    }
+                };
+                
+                this.themeOrder = ['mountain', 'forest', 'city', 'desert', 'beach'];
+                
+                // Système de highscores
+                this.highScores = this.loadHighScores();
+                this.currentScoreIndex = -1;
+                
+                // Audio
+                this.bgMusic = null;
+                this.engineSound = null;
+                this.crashSound = null;
+                this.isMusicPlaying = false;
+                
+                this.init();
+            }
+            
+            init() {
+                this.buildTrack();
+                this.resetSprites();
+                this.setupEventListeners();
+                this.setupAudio();
+            }
+            
+            setupAudio() {
+                // Créer un contexte audio pour la synthèse de sons
+                try {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.audioContext = new AudioContext();
+                    
+                    // Charger la musique de fond depuis le fichier
+                    this.bgMusic = new Audio('Sonic Racing CrossWorlds l OST l Wonder Museum.mp3');
+                    this.bgMusic.loop = true;
+                    this.bgMusic.volume = 0.5; // Volume à 50%
+                    
+                    this.createSynthMusic();
+                } catch (e) {
+                    console.log('Web Audio API non supportée');
+                }
+            }
+            
+            createSynthMusic() {
+                // Fonction pour créer de la musique synthétique style années 80
+                // Utilisée en fallback si le fichier audio ne charge pas
+                this.musicNodes = [];
+            }
+            
+            playBackgroundMusic() {
+                if (this.isMusicPlaying) return;
+                
+                // Essayer de jouer le fichier audio
+                if (this.bgMusic) {
+                    this.bgMusic.play().then(() => {
+                        this.isMusicPlaying = true;
+                    }).catch((error) => {
+                        console.log('Erreur lecture audio:', error);
+                        // Fallback sur la musique synthétique
+                        this.playSynthMusic();
+                    });
+                } else {
+                    // Fallback sur la musique synthétique
+                    this.playSynthMusic();
+                }
+            }
+            
+            playSynthMusic() {
+                if (!this.audioContext || this.isMusicPlaying) return;
+                
+                // Mélodie synthétique style OutRun
+                const notes = [
+                    { freq: 293.66, time: 0.0 },   // D
+                    { freq: 329.63, time: 0.5 },   // E
+                    { freq: 392.00, time: 1.0 },   // G
+                    { freq: 440.00, time: 1.5 },   // A
+                    { freq: 392.00, time: 2.0 },   // G
+                    { freq: 329.63, time: 2.5 },   // E
+                    { freq: 293.66, time: 3.0 },   // D
+                    { freq: 261.63, time: 3.5 }    // C
+                ];
+                
+                const now = this.audioContext.currentTime;
+                
+                notes.forEach(note => {
+                    const oscillator = this.audioContext.createOscillator();
+                    const gainNode = this.audioContext.createGain();
+                    
+                    oscillator.type = 'square'; // Son synthétique
+                    oscillator.frequency.setValueAtTime(note.freq, now + note.time);
+                    
+                    gainNode.gain.setValueAtTime(0.1, now + note.time);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + note.time + 0.5);
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(this.audioContext.destination);
+                    
+                    oscillator.start(now + note.time);
+                    oscillator.stop(now + note.time + 0.5);
+                    
+                    this.musicNodes.push(oscillator);
+                });
+                
+                this.isMusicPlaying = true;
+                
+                // Boucler la musique
+                setTimeout(() => {
+                    this.isMusicPlaying = false;
+                    if (this.gameRunning) {
+                        this.playSynthMusic();
+                    }
+                }, 4000);
+            }
+            
+            stopBackgroundMusic() {
+                // Arrêter la musique du fichier audio
+                if (this.bgMusic) {
+                    this.bgMusic.pause();
+                    this.bgMusic.currentTime = 0;
+                }
+                
+                // Arrêter la musique synthétique
+                this.musicNodes.forEach(node => {
+                    try {
+                        node.stop();
+                    } catch (e) {}
+                });
+                this.musicNodes = [];
+                this.isMusicPlaying = false;
+            }
+            
+            playEngineSound() {
+                if (!this.audioContext) return;
+                
+                const oscillator = this.audioContext.createOscillator();
+                const gainNode = this.audioContext.createGain();
+                
+                // Fréquence basée sur la vitesse
+                const freq = 50 + (this.speed / this.player.maxSpeed) * 200;
+                oscillator.frequency.setValueAtTime(freq, this.audioContext.currentTime);
+                
+                gainNode.gain.setValueAtTime(0.05, this.audioContext.currentTime);
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+                
+                oscillator.start();
+                oscillator.stop(this.audioContext.currentTime + 0.1);
+            }
+            
+            playCrashSound() {
+                if (!this.audioContext) return;
+                
+                const now = this.audioContext.currentTime;
+                const oscillator = this.audioContext.createOscillator();
+                const gainNode = this.audioContext.createGain();
+                
+                oscillator.type = 'sawtooth';
+                oscillator.frequency.setValueAtTime(200, now);
+                oscillator.frequency.exponentialRampToValueAtTime(50, now + 0.5);
+                
+                gainNode.gain.setValueAtTime(0.3, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+                
+                oscillator.start(now);
+                oscillator.stop(now + 0.5);
+            }
+            
+            buildTrack() {
+                this.segments = [];
+                
+                // Création d'une route continue infinie avec des patterns variés
+                // On crée une route suffisamment longue pour qu'elle boucle naturellement
+                this.addStraight(40);
+                this.addCurve(25, 4);
+                this.addStraight(30);
+                this.addCurve(35, -3);
+                this.addStraight(35);
+                this.addHill(25, 15);
+                this.addStraight(20);
+                this.addCurve(30, 5);
+                this.addStraight(25);
+                this.addHill(20, -10);
+                this.addCurve(25, -4);
+                this.addStraight(40);
+                this.addCurve(30, 3);
+                this.addStraight(30);
+                this.addCurve(20, -5);
+                this.addStraight(35);
+                this.addHill(15, 12);
+                this.addStraight(25);
+                
+                this.trackLength = this.segments.length * this.segmentLength;
+                
+                // On génère les sprites au démarrage
+                this.generateSprites();
+            }
+            
+            generateSprites() {
+                // Réinitialise tous les sprites de tous les segments
+                // On utilise Math.random() pour une vraie génération aléatoire à chaque boucle
+                
+                // Déterminer le thème actuel basé sur la distance
+                const themeIndex = Math.floor(this.themeDistance / 500) % this.themeOrder.length;
+                this.currentTheme = this.themeOrder[themeIndex];
+                const theme = this.themes[this.currentTheme];
+                
+                // Mettre à jour les couleurs de l'herbe
+                this.colors.road.light.grass = theme.grass;
+                this.colors.road.dark.grass = theme.darkGrass;
+                
+                for (let n = 0; n < this.segments.length; n++) {
+                    this.segments[n].sprites = [];
+                    
+                    // Panneaux publicitaires uniquement au début (premiers 10 segments)
+                    if (n >= 5 && n <= 10 && Math.random() > 0.6) {
+                        const side = Math.random() > 0.5 ? 1 : -1;
+                        const offset = side * (1.5 + Math.random() * 0.3); // Plus loin du bord
+                        
+                        this.segments[n].sprites.push({
+                            type: 'billboard',
+                            offset: offset
+                        });
+                    }
+                    
+                    // Ajout aléatoire de décors selon le thème
+                    if (Math.random() > 0.7) {
+                        const side = Math.random() > 0.5 ? 1 : -1;
+                        const offset = side * (1.4 + Math.random() * 0.6);
+                        
+                        // Sélection du sprite selon le thème
+                        const spriteType = theme.sprites[Math.floor(Math.random() * theme.sprites.length)];
+                        
+                        this.segments[n].sprites.push({
+                            type: spriteType,
+                            offset: offset
+                        });
+                    }
+                    
+                    // Voitures sur la route (obstacles) - plus nombreuses sur route élargie
+                    if (n > 50 && Math.random() > 0.96) {
+                        const laneOffset = (Math.random() - 0.5) * 1.9;
+                        
+                        this.segments[n].sprites.push({
+                            type: 'car',
+                            offset: laneOffset,
+                            speed: 2000 + Math.random() * 4000,
+                            z: 0
+                        });
+                    }
+                    
+                    // Ajouter encore plus de voitures sur les extrémités
+                    if (n > 50 && Math.random() > 0.98) {
+                        const side = Math.random() > 0.5 ? 1 : -1;
+                        const laneOffset = side * (0.7 + Math.random() * 0.25);
+                        
+                        this.segments[n].sprites.push({
+                            type: 'car',
+                            offset: laneOffset,
+                            speed: 2000 + Math.random() * 4000,
+                            z: 0
+                        });
+                    }
+                }
+            }
+            
+
+            
+            addSegment(curve, y) {
+                const n = this.segments.length;
+                this.segments.push({
+                    index: n,
+                    p1: {
+                        world: { x: 0, y: this.lastY(), z: n * this.segmentLength },
+                        camera: {},
+                        screen: {}
+                    },
+                    p2: {
+                        world: { x: 0, y: y, z: (n + 1) * this.segmentLength },
+                        camera: {},
+                        screen: {}
+                    },
+                    curve: curve,
+                    sprites: [],
+                    color: Math.floor(n / this.rumbleLength) % 2 ? this.colors.road.dark : this.colors.road.light
+                });
+            }
+            
+            addStraight(num) {
+                const startY = this.lastY();
+                for (let n = 0; n < num; n++) {
+                    this.addSegment(0, startY);
+                }
+            }
+            
+            addCurve(num, curve) {
+                const startY = this.lastY();
+                for (let n = 0; n < num; n++) {
+                    this.addSegment(curve, startY);
+                }
+            }
+            
+            addHill(num, height) {
+                const startY = this.lastY();
+                for (let n = 0; n < num; n++) {
+                    this.addSegment(0, startY + Math.sin(n / num * Math.PI) * height);
+                }
+            }
+            
+            lastY() {
+                return this.segments.length === 0 ? 0 : this.segments[this.segments.length - 1].p2.world.y;
+            }
+            
+            resetSprites() {
+                // Reset des positions des voitures
+                this.segments.forEach(segment => {
+                    if (segment.sprites) {
+                        segment.sprites.forEach(sprite => {
+                            if (sprite.type === 'car') {
+                                sprite.z = sprite.z || 0;
+                            }
+                        });
+                    }
+                });
+            }
+            
+            setupEventListeners() {
+                window.addEventListener('keydown', (e) => {
+                    this.keys[e.key] = true;
+                    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                        e.preventDefault();
+                    }
+                });
+                
+                window.addEventListener('keyup', (e) => {
+                    this.keys[e.key] = false;
+                });
+                
+                // Gestion de la saisie des lettres
+                const letter1 = document.getElementById('letter1');
+                const letter2 = document.getElementById('letter2');
+                const letter3 = document.getElementById('letter3');
+                
+                [letter1, letter2, letter3].forEach((input, index) => {
+                    input.addEventListener('input', (e) => {
+                        e.target.value = e.target.value.toUpperCase();
+                        if (e.target.value.length === 1 && index < 2) {
+                            [letter1, letter2, letter3][index + 1].focus();
+                        }
+                    });
+                    
+                    input.addEventListener('keydown', (e) => {
+                        if (e.key === 'Backspace' && e.target.value === '' && index > 0) {
+                            [letter1, letter2, letter3][index - 1].focus();
+                        }
+                        if (e.key === 'Enter') {
+                            this.saveHighScore();
+                        }
+                    });
+                });
+            }
+            
+            start() {
+                document.getElementById('startScreen').classList.add('hidden');
+                this.gameRunning = true;
+                this.reset();
+                this.playBackgroundMusic(); // Démarrer la musique
+                this.loop();
+            }
+            
+            reset() {
+                this.position = 0;
+                this.speed = 0; // Reset complet de la vitesse
+                this.score = 0;
+                this.distance = 0;
+                this.themeDistance = 0;
+                this.currentTheme = 'mountain'; // Reset au premier thème
+                this.player.x = 0;
+                this.player.z = 0;
+                this.skyOffset = 0;
+                this.resetSprites();
+                this.generateSprites(); // Générer les sprites du thème initial
+            }
+            
+            restart() {
+                document.getElementById('gameOverScreen').classList.add('hidden');
+                this.gameRunning = true;
+                this.reset(); // Reset complet incluant la vitesse
+                this.loop();
+            }
+            
+            update(dt) {
+                const baseSegment = this.findSegment(this.position);
+                const playerSegment = this.findSegment(this.position + this.player.z);
+                const speedPercent = this.speed / this.player.maxSpeed;
+                const dx = dt * 2 * speedPercent;
+                
+                // Son moteur basé sur la vitesse
+                if (this.gameRunning && speedPercent > 0.1 && Math.random() > 0.9) {
+                    this.playEngineSound();
+                }
+                
+                // Accélération et freinage
+                if (this.keys['ArrowUp']) {
+                    this.speed = Math.min(this.player.maxSpeed, this.speed + this.player.acceleration * dt);
+                } else if (this.keys['ArrowDown']) {
+                    this.speed = Math.max(0, this.speed - this.player.breaking * dt);
+                } else {
+                    this.speed = Math.max(0, this.speed - this.player.deceleration * dt);
+                }
+                
+                // Direction
+                if (this.keys['ArrowLeft']) {
+                    this.player.x -= this.player.turnSpeed * dt * speedPercent;
+                }
+                if (this.keys['ArrowRight']) {
+                    this.player.x += this.player.turnSpeed * dt * speedPercent;
+                }
+                
+                // Effet centrifuge dans les virages
+                if (playerSegment) {
+                    this.player.x -= (dx * speedPercent * playerSegment.curve * this.player.centrifugal);
+                }
+                
+                // Limites de la route
+                const maxX = this.roadWidth / 2 - this.player.width / 2;
+                this.player.x = Math.max(-maxX, Math.min(maxX, this.player.x));
+                
+                // Punition si le joueur est trop sur les bords (simulation de sortie de route)
+                if (Math.abs(this.player.x) > maxX * 0.85 && this.speed > this.player.maxSpeed * 0.3) {
+                    // Ralentissement progressif sur les bords SEULEMENT si vitesse > 30%
+                    // Permet de redémarrer depuis les bords
+                    this.speed = Math.max(this.player.maxSpeed * 0.3, this.speed - this.player.deceleration * 2.5 * dt);
+                }
+                
+                // Mise à jour de la position
+                this.position += this.speed * dt;
+                while (this.position >= this.trackLength) {
+                    this.position -= this.trackLength;
+                    // Génère de nouveaux sprites aléatoires pour la nouvelle boucle
+                    this.generateSprites();
+                }
+                
+                // Mise à jour du score et distance
+                this.distance += this.speed * dt * 0.001;
+                this.score = Math.floor(this.distance);
+                this.themeDistance = this.distance;
+                
+                // Changer de thème tous les 500m
+                const newThemeIndex = Math.floor(this.themeDistance / 500) % this.themeOrder.length;
+                const newTheme = this.themeOrder[newThemeIndex];
+                if (newTheme !== this.currentTheme) {
+                    this.currentTheme = newTheme;
+                    this.generateSprites(); // Régénérer les sprites pour le nouveau thème
+                }
+                
+                // Défilement du ciel
+                this.skyOffset = (this.skyOffset + this.speed * dt * 0.0001) % 1;
+                
+                // Détection de collisions
+                this.checkCollisions(playerSegment);
+                
+                // Mise à jour des voitures adverses
+                this.updateCars(dt);
+            }
+            
+            updateCars(dt) {
+                this.segments.forEach(segment => {
+                    if (segment.sprites) {
+                        segment.sprites.forEach(sprite => {
+                            if (sprite.type === 'car') {
+                                sprite.z = sprite.z || 0;
+                                // Les voitures avancent moins vite que le joueur
+                                const relativeSpeed = this.speed - sprite.speed;
+                                sprite.z += relativeSpeed * dt * 0.001;
+                                
+                                // Réinitialiser les voitures qui sont trop loin derrière
+                                if (sprite.z < -this.trackLength / 2) {
+                                    sprite.z += this.trackLength;
+                                }
+                            }
+                        });
+                    }
+                });
+            }
+            
+            checkCollisions(playerSegment) {
+                if (!playerSegment || !playerSegment.sprites) return;
+                
+                playerSegment.sprites.forEach(sprite => {
+                    if (sprite.type === 'car') {
+                        const spriteZ = sprite.z || 0;
+                        const spriteX = sprite.offset * this.roadWidth / 2;
+                        
+                        // Hitbox plus précise basée sur les dimensions réelles des voitures
+                        // Largeur voiture: 520 scale, Hauteur: 325 scale
+                        // Ajustement pour une collision réaliste
+                        const collisionDepth = 280; // Distance en Z pour détecter collision
+                        const collisionWidth = 260; // Distance latérale en X pour détecter collision
+                        
+                        if (Math.abs(spriteZ) < collisionDepth && Math.abs(this.player.x - spriteX) < collisionWidth) {
+                            this.gameOver();
+                        }
+                    }
+                });
+            }
+            
+            gameOver() {
+                this.gameRunning = false;
+                this.speed = 0; // Reset de la vitesse lors du game over
+                this.stopBackgroundMusic(); // Arrêter la musique
+                this.playCrashSound(); // Son de crash
+                document.getElementById('finalScore').textContent = this.score;
+                document.getElementById('finalDistance').textContent = Math.floor(this.distance);
+                
+                // Vérifier si c'est un highscore
+                if (this.isHighScore(this.score)) {
+                    document.getElementById('nameInput').classList.remove('hidden');
+                    document.getElementById('highScoreTable').classList.add('hidden');
+                    document.getElementById('restartBtn').classList.add('hidden');
+                    // Focus sur le premier input
+                    setTimeout(() => document.getElementById('letter1').focus(), 100);
+                } else {
+                    document.getElementById('nameInput').classList.add('hidden');
+                    this.displayHighScores();
+                    document.getElementById('highScoreTable').classList.remove('hidden');
+                    document.getElementById('restartBtn').classList.remove('hidden');
+                }
+                
+                document.getElementById('gameOverScreen').classList.remove('hidden');
+            }
+            
+            loadHighScores() {
+                const saved = localStorage.getItem('outrunHighScores');
+                if (saved) {
+                    return JSON.parse(saved);
+                }
+                return [];
+            }
+            
+            saveHighScoresToStorage() {
+                localStorage.setItem('outrunHighScores', JSON.stringify(this.highScores));
+            }
+            
+            isHighScore(score) {
+                if (this.highScores.length < 5) return true;
+                return score > this.highScores[4].score;
+            }
+            
+            saveHighScore() {
+                const letter1 = document.getElementById('letter1').value.toUpperCase();
+                const letter2 = document.getElementById('letter2').value.toUpperCase();
+                const letter3 = document.getElementById('letter3').value.toUpperCase();
+                
+                if (!letter1 || !letter2 || !letter3) {
+                    alert('Veuillez entrer 3 lettres !');
+                    return;
+                }
+                
+                const name = letter1 + letter2 + letter3;
+                
+                // Ajouter le nouveau score
+                this.highScores.push({
+                    name: name,
+                    score: this.score,
+                    distance: Math.floor(this.distance),
+                    date: new Date().toISOString()
+                });
+                
+                // Trier par score décroissant
+                this.highScores.sort((a, b) => b.score - a.score);
+                
+                // Garder seulement le top 5
+                if (this.highScores.length > 5) {
+                    this.highScores = this.highScores.slice(0, 5);
+                }
+                
+                // Trouver l'index du nouveau score
+                this.currentScoreIndex = this.highScores.findIndex(
+                    s => s.name === name && s.score === this.score && s.distance === Math.floor(this.distance)
+                );
+                
+                // Sauvegarder
+                this.saveHighScoresToStorage();
+                
+                // Réinitialiser les inputs
+                document.getElementById('letter1').value = '';
+                document.getElementById('letter2').value = '';
+                document.getElementById('letter3').value = '';
+                
+                // Afficher le tableau des scores
+                document.getElementById('nameInput').classList.add('hidden');
+                this.displayHighScores();
+                document.getElementById('highScoreTable').classList.remove('hidden');
+                document.getElementById('restartBtn').classList.remove('hidden');
+            }
+            
+            displayHighScores() {
+                const tbody = document.getElementById('highScoreList');
+                tbody.innerHTML = '';
+                
+                if (this.highScores.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px; color: #666;">Aucun score enregistré</td></tr>';
+                    return;
+                }
+                
+                this.highScores.forEach((score, index) => {
+                    const row = document.createElement('tr');
+                    const isNewScore = index === this.currentScoreIndex;
+                    
+                    if (isNewScore) {
+                        row.classList.add('new-score');
+                    }
+                    
+                    const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+                    
+                    row.innerHTML = `
+                        <td style="padding: 10px 20px; text-align: center; font-weight: bold;">${medal} ${index + 1}</td>
+                        <td style="padding: 10px 20px; text-align: left; font-weight: bold;">${score.name}</td>
+                        <td style="padding: 10px 20px; text-align: right;">${score.score}</td>
+                        <td style="padding: 10px 20px; text-align: right;">${score.distance} m</td>
+                    `;
+                    
+                    tbody.appendChild(row);
+                });
+                
+                // Reset l'index après affichage
+                setTimeout(() => {
+                    this.currentScoreIndex = -1;
+                }, 5000);
+            }
+            
+            findSegment(z) {
+                return this.segments[Math.floor(z / this.segmentLength) % this.segments.length];
+            }
+            
+            project(p, cameraX, cameraY, cameraZ) {
+                p.camera.x = p.world.x - cameraX;
+                p.camera.y = p.world.y - cameraY;
+                p.camera.z = p.world.z - cameraZ;
+                
+                const scale = this.fieldOfView / p.camera.z;
+                p.screen.x = Math.round(this.width / 2 + scale * p.camera.x);
+                p.screen.y = Math.round(this.height / 2 - scale * p.camera.y);
+                p.screen.w = Math.round(scale * this.roadWidth);
+                p.screen.scale = scale;
+            }
+            
+            render() {
+                const ctx = this.ctx;
+                const baseSegment = this.findSegment(this.position);
+                const basePercent = (this.position % this.segmentLength) / this.segmentLength;
+                const playerSegment = this.findSegment(this.position + this.player.z);
+                const playerY = this.interpolate(baseSegment.p1.world.y, baseSegment.p2.world.y, basePercent);
+                
+                const cameraX = this.player.x;
+                const cameraY = this.cameraHeight + playerY;
+                const cameraZ = this.position;
+                
+                // Ciel avec dégradé rétro
+                this.renderSky();
+                
+                // Montages à l'horizon
+                this.renderMountains();
+                
+                let maxY = this.height;
+                let n, segment;
+                
+                // Rendu des segments de route
+                for (n = 0; n < this.drawDistance; n++) {
+                    segment = this.segments[(baseSegment.index + n) % this.segments.length];
+                    
+                    this.project(segment.p1, cameraX, cameraY, cameraZ);
+                    this.project(segment.p2, cameraX, cameraY, cameraZ);
+                    
+                    if (segment.p1.camera.z <= 0) continue;
+                    if (segment.p2.screen.y >= maxY) continue;
+                    
+                    this.renderSegment(segment, segment.p1, segment.p2);
+                    maxY = segment.p2.screen.y;
+                }
+                
+                // Rendu des sprites (arbres, buildings, voitures)
+                for (n = this.drawDistance - 1; n > 0; n--) {
+                    segment = this.segments[(baseSegment.index + n) % this.segments.length];
+                    if (segment.sprites) {
+                        segment.sprites.forEach(sprite => {
+                            this.renderSprite(segment, sprite, cameraX, cameraY, cameraZ);
+                        });
+                    }
+                }
+                
+                // Rendu de la voiture du joueur
+                this.renderPlayer();
+                
+                // HUD
+                this.renderHUD();
+            }
+            
+            renderSky() {
+                const theme = this.themes[this.currentTheme];
+                
+                const gradient = this.ctx.createLinearGradient(0, 0, 0, this.height / 2);
+                gradient.addColorStop(0, theme.sky[0]);
+                gradient.addColorStop(0.5, theme.sky[1]);
+                gradient.addColorStop(1, theme.sky[2]);
+                
+                this.ctx.fillStyle = gradient;
+                this.ctx.fillRect(0, 0, this.width, this.height / 2);
+                
+                // Soleil rétro (seulement pour certains thèmes)
+                if (this.currentTheme === 'mountain' || this.currentTheme === 'desert' || this.currentTheme === 'beach') {
+                    const sunY = this.height * 0.15;
+                    const sunSize = 80;
+                    
+                    // Rayons du soleil
+                    this.ctx.strokeStyle = 'rgba(255, 200, 0, 0.3)';
+                    this.ctx.lineWidth = 2;
+                    for (let i = 0; i < 12; i++) {
+                        const angle = (i / 12) * Math.PI * 2;
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(this.width / 2, sunY);
+                        this.ctx.lineTo(
+                            this.width / 2 + Math.cos(angle) * sunSize * 1.5,
+                            sunY + Math.sin(angle) * sunSize * 1.5
+                        );
+                        this.ctx.stroke();
+                    }
+                    
+                    // Disque du soleil
+                    const sunGradient = this.ctx.createRadialGradient(
+                        this.width / 2, sunY, 0,
+                        this.width / 2, sunY, sunSize
+                    );
+                    
+                    if (this.currentTheme === 'desert') {
+                        sunGradient.addColorStop(0, '#fffaaa');
+                        sunGradient.addColorStop(0.5, '#ffcc00');
+                        sunGradient.addColorStop(1, '#ff8800');
+                    } else {
+                        sunGradient.addColorStop(0, '#fffaaa');
+                        sunGradient.addColorStop(0.5, '#ffaa00');
+                        sunGradient.addColorStop(1, '#ff6600');
+                    }
+                    
+                    this.ctx.fillStyle = sunGradient;
+                    this.ctx.beginPath();
+                    this.ctx.arc(this.width / 2, sunY, sunSize, 0, Math.PI * 2);
+                    this.ctx.fill();
+                }
+                
+                // Étoiles pour la ville (thème nocturne)
+                if (this.currentTheme === 'city') {
+                    this.ctx.fillStyle = '#ffffff';
+                    for (let i = 0; i < 50; i++) {
+                        const x = (i * 123.456) % this.width;
+                        const y = (i * 78.910) % (this.height / 2);
+                        const size = 1 + (i % 3);
+                        this.ctx.fillRect(x, y, size, size);
+                    }
+                }
+            }
+            
+            renderMountains() {
+                // Montagnes fixes à l'horizon (pas de défilement)
+                this.ctx.fillStyle = '#331133';
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, this.height / 2);
+                
+                // Dessin de montagnes fixes avec des pics prédéfinis
+                const peaks = [
+                    { x: 0, y: this.height / 2 - 80 },
+                    { x: this.width * 0.1, y: this.height / 2 - 120 },
+                    { x: this.width * 0.15, y: this.height / 2 - 90 },
+                    { x: this.width * 0.25, y: this.height / 2 - 150 },
+                    { x: this.width * 0.35, y: this.height / 2 - 100 },
+                    { x: this.width * 0.5, y: this.height / 2 - 180 },
+                    { x: this.width * 0.6, y: this.height / 2 - 110 },
+                    { x: this.width * 0.7, y: this.height / 2 - 140 },
+                    { x: this.width * 0.8, y: this.height / 2 - 95 },
+                    { x: this.width * 0.9, y: this.height / 2 - 130 },
+                    { x: this.width, y: this.height / 2 - 70 }
+                ];
+                
+                peaks.forEach(peak => {
+                    this.ctx.lineTo(peak.x, peak.y);
+                });
+                
+                this.ctx.lineTo(this.width, this.height / 2);
+                this.ctx.closePath();
+                this.ctx.fill();
+            }
+            
+            renderSegment(segment, p1, p2) {
+                const ctx = this.ctx;
+                const color = segment.color;
+                
+                // Herbe
+                ctx.fillStyle = color.grass;
+                ctx.fillRect(0, p2.screen.y, this.width, p1.screen.y - p2.screen.y);
+                
+                // Bordures de route (rumble strips)
+                this.renderPolygon(
+                    p1.screen.x - p1.screen.w - p1.screen.w * 0.1,
+                    p1.screen.y,
+                    p1.screen.x - p1.screen.w,
+                    p1.screen.y,
+                    p2.screen.x - p2.screen.w,
+                    p2.screen.y,
+                    p2.screen.x - p2.screen.w - p2.screen.w * 0.1,
+                    p2.screen.y,
+                    color.rumble || '#ffffff'
+                );
+                
+                this.renderPolygon(
+                    p1.screen.x + p1.screen.w,
+                    p1.screen.y,
+                    p1.screen.x + p1.screen.w + p1.screen.w * 0.1,
+                    p1.screen.y,
+                    p2.screen.x + p2.screen.w + p2.screen.w * 0.1,
+                    p2.screen.y,
+                    p2.screen.x + p2.screen.w,
+                    p2.screen.y,
+                    color.rumble || '#ffffff'
+                );
+                
+                // Route
+                this.renderPolygon(
+                    p1.screen.x - p1.screen.w,
+                    p1.screen.y,
+                    p1.screen.x + p1.screen.w,
+                    p1.screen.y,
+                    p2.screen.x + p2.screen.w,
+                    p2.screen.y,
+                    p2.screen.x - p2.screen.w,
+                    p2.screen.y,
+                    color.road
+                );
+                
+                // Ligne centrale
+                if (color.lane) {
+                    const laneW1 = p1.screen.w / 20;
+                    const laneW2 = p2.screen.w / 20;
+                    const laneX1 = p1.screen.x;
+                    const laneX2 = p2.screen.x;
+                    
+                    this.renderPolygon(
+                        laneX1 - laneW1,
+                        p1.screen.y,
+                        laneX1 + laneW1,
+                        p1.screen.y,
+                        laneX2 + laneW2,
+                        p2.screen.y,
+                        laneX2 - laneW2,
+                        p2.screen.y,
+                        color.lane
+                    );
+                }
+            }
+            
+            renderPolygon(x1, y1, x2, y2, x3, y3, x4, y4, color) {
+                this.ctx.fillStyle = color;
+                this.ctx.beginPath();
+                this.ctx.moveTo(x1, y1);
+                this.ctx.lineTo(x2, y2);
+                this.ctx.lineTo(x3, y3);
+                this.ctx.lineTo(x4, y4);
+                this.ctx.closePath();
+                this.ctx.fill();
+            }
+            
+            renderSprite(segment, sprite, cameraX, cameraY, cameraZ) {
+                const spriteScale = segment.p1.screen.scale;
+                if (spriteScale <= 0) return;
+                
+                const spriteZ = sprite.z || 0;
+                const spriteX = sprite.offset * this.roadWidth / 2;
+                const spriteY = segment.p1.world.y;
+                
+                const p = {
+                    world: { x: spriteX, y: spriteY, z: segment.p1.world.z + spriteZ },
+                    camera: {},
+                    screen: {}
+                };
+                
+                this.project(p, cameraX, cameraY, cameraZ);
+                
+                if (p.camera.z <= 0) return;
+                
+                const scale = p.screen.scale;
+                const ctx = this.ctx;
+                
+                switch (sprite.type) {
+                    case 'tree':
+                        this.drawTree(p.screen.x, p.screen.y, scale);
+                        break;
+                    case 'palm':
+                        this.drawPalm(p.screen.x, p.screen.y, scale);
+                        break;
+                    case 'building':
+                        this.drawBuilding(p.screen.x, p.screen.y, scale);
+                        break;
+                    case 'billboard':
+                        this.drawBillboard(p.screen.x, p.screen.y, scale);
+                        break;
+                    case 'car':
+                        this.drawCar(p.screen.x, p.screen.y, scale);
+                        break;
+                }
+            }
+            
+            drawTree(x, y, scale) {
+                // Agrandissement x6 pour des arbres massifs
+                const h = 900 * scale;
+                const w = 180 * scale;
+                
+                // Ombre de l'arbre
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                this.ctx.beginPath();
+                this.ctx.ellipse(x, y + 10 * scale, w, w * 0.3, 0, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Tronc avec texture
+                const trunkGradient = this.ctx.createLinearGradient(x - w / 2, y - h, x + w / 2, y - h);
+                trunkGradient.addColorStop(0, '#5d3a1a');
+                trunkGradient.addColorStop(0.5, '#8B4513');
+                trunkGradient.addColorStop(1, '#5d3a1a');
+                this.ctx.fillStyle = trunkGradient;
+                this.ctx.fillRect(x - w / 2, y - h, w, h);
+                
+                // Détails du tronc
+                this.ctx.fillStyle = '#5d3a1a';
+                this.ctx.fillRect(x - w / 2, y - h * 0.7, w * 0.15, h * 0.2);
+                this.ctx.fillRect(x + w / 3, y - h * 0.4, w * 0.15, h * 0.15);
+                
+                // Feuillage (5 niveaux pour plus de volume)
+                this.ctx.fillStyle = '#0d4d0d';
+                this.ctx.beginPath();
+                this.ctx.arc(x, y - h + 40 * scale, w * 2.5, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                this.ctx.fillStyle = '#1a5c1a';
+                this.ctx.beginPath();
+                this.ctx.arc(x, y - h + 20 * scale, w * 2.2, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                this.ctx.fillStyle = '#228B22';
+                this.ctx.beginPath();
+                this.ctx.arc(x, y - h, w * 2, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                this.ctx.fillStyle = '#2eb82e';
+                this.ctx.beginPath();
+                this.ctx.arc(x, y - h - 30 * scale, w * 1.7, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                this.ctx.fillStyle = '#3fdb3f';
+                this.ctx.beginPath();
+                this.ctx.arc(x, y - h - 60 * scale, w * 1.3, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+            
+            drawPalm(x, y, scale) {
+                // Agrandissement x3
+                const h = 600 * scale;
+                const w = 60 * scale;
+                
+                // Tronc avec segments
+                this.ctx.strokeStyle = '#8B7355';
+                this.ctx.lineWidth = w;
+                this.ctx.lineCap = 'round';
+                this.ctx.beginPath();
+                this.ctx.moveTo(x, y);
+                this.ctx.lineTo(x + w / 2, y - h);
+                this.ctx.stroke();
+                
+                // Anneaux du tronc
+                this.ctx.strokeStyle = '#6d5a3d';
+                this.ctx.lineWidth = w * 1.1;
+                for (let i = 0; i < 5; i++) {
+                    this.ctx.beginPath();
+                    this.ctx.arc(x + w / 4, y - h * (0.2 + i * 0.15), w / 2, 0, Math.PI * 2);
+                    this.ctx.stroke();
+                }
+                
+                // Palmes plus grandes
+                this.ctx.lineCap = 'round';
+                for (let i = 0; i < 8; i++) {
+                    const angle = (i / 8) * Math.PI * 2;
+                    // Palme arrière (plus sombre)
+                    this.ctx.strokeStyle = '#2a9d2a';
+                    this.ctx.lineWidth = w / 2;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x + w / 2, y - h);
+                    this.ctx.lineTo(
+                        x + w / 2 + Math.cos(angle) * w * 5,
+                        y - h + Math.sin(angle) * w * 3.5
+                    );
+                    this.ctx.stroke();
+                    
+                    // Palme avant (plus claire)
+                    this.ctx.strokeStyle = '#32CD32';
+                    this.ctx.lineWidth = w / 2.5;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x + w / 2, y - h);
+                    this.ctx.lineTo(
+                        x + w / 2 + Math.cos(angle) * w * 4.5,
+                        y - h + Math.sin(angle) * w * 3
+                    );
+                    this.ctx.stroke();
+                }
+            }
+            
+            drawBuilding(x, y, scale) {
+                // Agrandissement x3
+                const h = 900 * scale;
+                const w = 450 * scale;
+                
+                // Building principal avec dégradé
+                const gradient = this.ctx.createLinearGradient(x - w / 2, y - h, x + w / 2, y - h);
+                gradient.addColorStop(0, '#ff1493');
+                gradient.addColorStop(0.5, '#9932cc');
+                gradient.addColorStop(1, '#00ffff');
+                
+                this.ctx.fillStyle = gradient;
+                this.ctx.fillRect(x - w / 2, y - h, w, h);
+                
+                // Ombre du building
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                this.ctx.fillRect(x - w / 2, y - h, w / 8, h);
+                
+                // Fenêtres
+                const windowSize = w / 10;
+                const windowCols = 6;
+                const windowRows = 12;
+                
+                for (let row = 0; row < windowRows; row++) {
+                    for (let col = 0; col < windowCols; col++) {
+                        // Fenêtres aléatoirement allumées
+                        const lit = Math.sin((x + y + row + col) * 1000) > 0.2;
+                        this.ctx.fillStyle = lit ? '#ffff00' : '#333333';
+                        this.ctx.fillRect(
+                            x - w / 2 + col * (w / windowCols) + windowSize / 2,
+                            y - h + row * (h / windowRows) + windowSize / 2,
+                            windowSize,
+                            windowSize
+                        );
+                    }
+                }
+                
+                // Toit avec antenne
+                this.ctx.fillStyle = '#ff1493';
+                this.ctx.fillRect(x - w / 2 - 10 * scale, y - h, w + 20 * scale, 15 * scale);
+                this.ctx.fillRect(x - 5 * scale, y - h - 50 * scale, 10 * scale, 50 * scale);
+                this.ctx.fillStyle = '#ff0000';
+                this.ctx.beginPath();
+                this.ctx.arc(x, y - h - 50 * scale, 8 * scale, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+            
+            drawBillboard(x, y, scale) {
+                // Agrandissement x3
+                const h = 300 * scale;
+                const w = 450 * scale;
+                
+                // Poteaux (2 poteaux)
+                this.ctx.fillStyle = '#666';
+                this.ctx.fillRect(x - w / 2 - 15 * scale, y - h * 1.8, 15 * scale, h * 1.8);
+                this.ctx.fillRect(x + w / 2, y - h * 1.8, 15 * scale, h * 1.8);
+                
+                // Ombre du panneau
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                this.ctx.fillRect(x - w / 2 + 10 * scale, y - h * 2.1 + 10 * scale, w, h);
+                
+                // Panneau avec bordure néon
+                this.ctx.fillStyle = '#000';
+                this.ctx.fillRect(x - w / 2, y - h * 2.1, w, h);
+                
+                this.ctx.fillStyle = '#ff1493';
+                this.ctx.fillRect(x - w / 2 + 10 * scale, y - h * 2.1 + 10 * scale, w - 20 * scale, h - 20 * scale);
+                
+                // Bordure néon
+                this.ctx.strokeStyle = '#00ffff';
+                this.ctx.lineWidth = 5 * scale;
+                this.ctx.strokeRect(x - w / 2 + 10 * scale, y - h * 2.1 + 10 * scale, w - 20 * scale, h - 20 * scale);
+                
+                // Texte OUTRUN
+                this.ctx.fillStyle = '#fff';
+                this.ctx.font = `bold ${60 * scale}px Arial`;
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+                this.ctx.fillText('OUTRUN', x, y - h * 1.6);
+                
+                // Sous-titre
+                this.ctx.font = `bold ${25 * scale}px Arial`;
+                this.ctx.fillStyle = '#00ffff';
+                this.ctx.fillText('ARCADE RACING', x, y - h * 1.3);
+            }
+            
+            drawCar(x, y, scale) {
+                // Voitures réduites à x6.5 (entre la taille x5 et x10 précédente)
+                const h = 325 * scale;
+                const w = 520 * scale;
+                
+                // Ombre portée
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                this.ctx.beginPath();
+                this.ctx.ellipse(x, y + 30 * scale, w / 1.7, h / 3.5, 0, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Corps de la voiture avec couleurs variées
+                const carColors = ['#ff0000', '#0000ff', '#ffff00', '#00ff00', '#ff00ff', '#ffffff', '#ff6600', '#00ffff'];
+                this.ctx.fillStyle = carColors[Math.floor(Math.abs(x + y) * 123) % carColors.length];
+                this.ctx.fillRect(x - w / 2, y - h, w, h);
+                
+                // Bandes de course
+                this.ctx.fillStyle = '#ffffff';
+                this.ctx.fillRect(x - w / 2 + 35 * scale, y - h * 0.5, w - 70 * scale, h * 0.1);
+                this.ctx.fillRect(x - w / 2 + 35 * scale, y - h * 0.3, w - 70 * scale, h * 0.08);
+                
+                // Toit
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+                this.ctx.fillRect(x - w / 3, y - h * 1.35, w * 0.66, h * 0.55);
+                
+                // Pare-brise
+                this.ctx.fillStyle = '#87CEEB';
+                this.ctx.globalAlpha = 0.7;
+                this.ctx.fillRect(x - w / 4, y - h * 1.3, w / 2.5, h * 0.4);
+                this.ctx.globalAlpha = 1.0;
+                
+                // Roues avec jantes
+                this.ctx.fillStyle = '#000';
+                const wheelSize = w * 0.18;
+                // Roue gauche arrière
+                this.ctx.fillRect(x - w / 2 + 30 * scale, y - h * 0.25, wheelSize, wheelSize * 1.3);
+                this.ctx.fillStyle = '#444';
+                this.ctx.fillRect(x - w / 2 + 35 * scale, y - h * 0.2, wheelSize * 0.7, wheelSize);
+                // Roue droite arrière
+                this.ctx.fillStyle = '#000';
+                this.ctx.fillRect(x + w / 2 - wheelSize - 30 * scale, y - h * 0.25, wheelSize, wheelSize * 1.3);
+                this.ctx.fillStyle = '#444';
+                this.ctx.fillRect(x + w / 2 - wheelSize - 25 * scale, y - h * 0.2, wheelSize * 0.7, wheelSize);
+                
+                // Phares avant très visibles
+                this.ctx.fillStyle = '#ffff00';
+                this.ctx.fillRect(x - w / 2 + 25 * scale, y - h * 0.85, 35 * scale, 22 * scale);
+                this.ctx.fillRect(x + w / 2 - 60 * scale, y - h * 0.85, 35 * scale, 22 * scale);
+                
+                // Feux arrière rouges
+                this.ctx.fillStyle = '#ff0000';
+                this.ctx.fillRect(x - w / 2 + 25 * scale, y - h * 0.1, 35 * scale, 18 * scale);
+                this.ctx.fillRect(x + w / 2 - 60 * scale, y - h * 0.1, 35 * scale, 18 * scale);
+                
+                // Aileron/Spoiler
+                this.ctx.fillStyle = '#000';
+                this.ctx.fillRect(x - w / 2 + 15 * scale, y - h * 0.05, w - 30 * scale, 12 * scale);
+                
+                // Reflets lumineux
+                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                this.ctx.fillRect(x - w / 3, y - h * 0.95, w * 0.6, h * 0.08);
+                this.ctx.fillRect(x - w / 6, y - h * 0.7, w * 0.3, h * 0.05);
+                
+                // Détails chromés
+                this.ctx.strokeStyle = 'rgba(200, 200, 200, 0.8)';
+                this.ctx.lineWidth = 2 * scale;
+                this.ctx.strokeRect(x - w / 2, y - h, w, h);
+            }
+            
+            renderPlayer() {
+                const bounce = Math.sin(Date.now() / 100) * 2;
+                const x = this.width / 2;
+                const y = this.height - 120 + bounce;
+                const scale = 0.4;
+                
+                const w = 200 * scale;
+                const h = 120 * scale;
+                
+                // Ombre
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+                this.ctx.beginPath();
+                this.ctx.ellipse(x, y + h + 10, w / 1.5, h / 4, 0, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Roues
+                this.ctx.fillStyle = '#222';
+                this.ctx.fillRect(x - w / 2 - 10, y + h / 2, 15, 25);
+                this.ctx.fillRect(x + w / 2 - 5, y + h / 2, 15, 25);
+                
+                // Corps principal
+                const gradient = this.ctx.createLinearGradient(x - w / 2, y, x + w / 2, y);
+                gradient.addColorStop(0, '#ff1493');
+                gradient.addColorStop(0.5, '#ff69b4');
+                gradient.addColorStop(1, '#ff1493');
+                
+                this.ctx.fillStyle = gradient;
+                this.ctx.fillRect(x - w / 2, y, w, h);
+                
+                // Pare-brise
+                this.ctx.fillStyle = '#87CEEB';
+                this.ctx.beginPath();
+                this.ctx.moveTo(x - w / 3, y + 10);
+                this.ctx.lineTo(x + w / 3, y + 10);
+                this.ctx.lineTo(x + w / 4, y + h / 2);
+                this.ctx.lineTo(x - w / 4, y + h / 2);
+                this.ctx.closePath();
+                this.ctx.fill();
+                
+                // Spoiler
+                this.ctx.fillStyle = '#000';
+                this.ctx.fillRect(x - w / 2 - 5, y, w + 10, 10);
+                
+                // Phares
+                this.ctx.fillStyle = '#ffff00';
+                this.ctx.fillRect(x - w / 2 + 10, y + h - 10, 15, 8);
+                this.ctx.fillRect(x + w / 2 - 25, y + h - 10, 15, 8);
+                
+                // Reflets
+                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                this.ctx.fillRect(x - w / 4, y + 20, w / 2, 5);
+            }
+            
+            renderHUD() {
+                const ctx = this.ctx;
+                
+                // Fond semi-transparent
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.fillRect(0, 0, this.width, 100);
+                
+                // Score
+                ctx.fillStyle = '#00ffff';
+                ctx.font = 'bold 32px Courier New';
+                ctx.textAlign = 'left';
+                ctx.fillText(`SCORE: ${this.score}`, 20, 40);
+                
+                // Distance
+                ctx.fillText(`${Math.floor(this.distance)} M`, 20, 70);
+                
+                // Thème actuel
+                const theme = this.themes[this.currentTheme];
+                ctx.fillStyle = '#ffff00';
+                ctx.font = 'bold 24px Courier New';
+                const nextThemeDistance = (Math.floor(this.distance / 500) + 1) * 500;
+                const distanceToNext = nextThemeDistance - Math.floor(this.distance);
+                ctx.fillText(`${theme.name.toUpperCase()} (${distanceToNext}m)`, 20, 95);
+                
+                // Vitesse
+                const speedKmh = Math.floor((this.speed / this.player.maxSpeed) * 300);
+                ctx.textAlign = 'right';
+                ctx.fillStyle = '#ff1493';
+                ctx.fillText(`${speedKmh} KM/H`, this.width - 20, 40);
+                
+                // Barre de vitesse
+                const barWidth = 200;
+                const barHeight = 20;
+                const barX = this.width - 220;
+                const barY = 50;
+                
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(barX, barY, barWidth, barHeight);
+                
+                const speedBar = (this.speed / this.player.maxSpeed) * barWidth;
+                const barGradient = ctx.createLinearGradient(barX, 0, barX + barWidth, 0);
+                barGradient.addColorStop(0, '#00ff00');
+                barGradient.addColorStop(0.5, '#ffff00');
+                barGradient.addColorStop(1, '#ff0000');
+                
+                ctx.fillStyle = barGradient;
+                ctx.fillRect(barX, barY, speedBar, barHeight);
+            }
+            
+            interpolate(a, b, percent) {
+                return a + (b - a) * percent;
+            }
+            
+            loop() {
+                if (!this.gameRunning) return;
+                
+                const now = performance.now();
+                const dt = Math.min(0.1, (now - (this.lastTime || now)) / 1000);
+                this.lastTime = now;
+                
+                this.update(dt);
+                this.render();
+                
+                requestAnimationFrame(() => this.loop());
+            }
+        }
+        
+        // Initialisation du jeu
+        const game = new OutRunGame();
+    </script>
+</body>
+</html>
